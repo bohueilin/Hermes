@@ -1,5 +1,5 @@
 import {createMethodologyExplainer} from './methodology-explainer.js';
-// Walkthrough: user-started preparation; beats only seek, pin and project accepted runs.
+// Walkthrough: route-entry preparation; beats only seek, pin and project accepted runs.
 // Visual reveals never advance clocks, alter verdicts or supply absent values.
 
 import { CHECK_IDS } from "../model/invariants.js";
@@ -642,6 +642,9 @@ const smallLabel = (role, text = "") => el("p", { class: "fl-small-label", "data
 export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, scenarioOf, prepare, times = () => null, onGoToKnobs = () => {}, onWatchSeed = () => {}, onSpotlight = () => {} }) {
   const dispatch = (action) => store.dispatch(action);
   let preparing = false;
+  let prepareTicket = 0;
+  let prepareFailed = false;
+  let destroyed = false;
   let applying = 0;
   let cardClosed = false;
   let lastTickerOrd = null;
@@ -863,20 +866,28 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     goto(target.chapter, target.beat);
   }
 
-  async function runPrepare() {
-    if (preparing || store.getState().present.prepared) return;
+  async function runPrepare({focus = true} = {}) {
+    if (destroyed || preparing || store.getState().present.prepared) return;
+    const ticket = ++prepareTicket;
     const doc = rail.ownerDocument;
     preparing = true;
+    prepareFailed = false;
     render(store.getState());
     try {
       await prepare();
+      if (ticket !== prepareTicket) return;
+      prepareFailed = !store.getState().present.prepared;
+    } catch {
+      if (ticket !== prepareTicket) return;
+      prepareFailed = true;
     } finally {
+      if (destroyed || ticket !== prepareTicket) return;
       preparing = false;
       const state = store.getState();
-      if (state.present.prepared) applyBeat(state.present.chapter, state.present.beat);
+      if (state.present.on && state.present.prepared) applyBeat(state.present.chapter, state.present.beat);
       render(store.getState());
       const active = doc.activeElement;
-      if (store.getState().present.prepared && (active === null || active === doc.body)) nextButton.focus();
+      if (focus && state.present.on && state.present.prepared && (active === null || active === doc.body)) nextButton.focus();
     }
   }
 
@@ -891,6 +902,9 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
 
   function close() {
     if (!store.getState().present.on) return;
+    prepareTicket += 1;
+    preparing = false;
+    prepareFailed = false;
     if (store.getState().playing) playback.pause();
     dispatch({ type: "present/close" });
   }
@@ -1041,6 +1055,8 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
       node.toggleAttribute("inert", prepared);
     }
     prepareButton.disabled = preparing;
+    setText(prepareButton, prepareFailed ? "Try preparing again" : PRESENT.prepare);
+    ledger.setAttribute("aria-busy", String(preparing));
     prepareProgress.hidden=!preparing;const p=state.experiment.status==="running"?state.experiment.progress:state.run.status==="running"?state.run.progress:null;
     if(p?.total){prepareProgress.max=p.total;prepareProgress.value=p.done;}else prepareProgress.removeAttribute("value");
     setText(prepareStatus, prepareStatusText(state));
@@ -1058,6 +1074,7 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     if (state.run.status === "running" && state.run.progress !== null) {
       return labels.replicationProgress(Math.min(state.run.progress.done + 1, state.run.progress.total), state.run.progress.total);
     }
+    if (prepareFailed) return "The walkthrough could not finish both runs. No walkthrough result is ready. Try preparing again.";
     return preparing ? PRESENT.preparing : PRESENT.prepareWait;
   }
 
@@ -1092,13 +1109,14 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     }
     const beat = beatAt(state.present.chapter, state.present.beat);
     const ctx = state.present.prepared && !preparing ? contextOf(state) : null;
+    for (const node of [chapterTitle, figures, beatContent, narration, ruleLine, caveat, tickerFoot]) node.hidden = ctx === null;
     const chapter = CHAPTERS[Math.min(state.present.chapter, CHAPTERS.length - 1)];
     setText(chapterTitle, `${state.present.chapter+1} / ${CHAPTERS.length} · ${chapter.title.replace(/^\d+\s*/,"")}`);
     const target=ctx&&beat.open?beat.open(ctx):null;
     onSpotlight(ctx?{area:target?.area??focusArea(state),depot:target?.depot??null}:null);
-    setText(beatTitleNode, beatTitle(beat, scenarioOf(state)));
+    setText(beatTitleNode, ctx === null ? (prepareFailed ? "Let’s try that again." : "Preparing your first story.") : beatTitle(beat, scenarioOf(state)));
     const clock = beatClock(beat, scenarioOf(state));
-    beatClockText.hidden = clock === null;
+    beatClockText.hidden = clock === null || ctx === null;
     if (clock !== null) setText(beatClockText, format.clock(state.clock_s));
     const stop = beat.play === null ? null : beat.play(scenarioOf(state));
     playHint.hidden = stop === null || !state.present.prepared || state.playing || state.clock_s >= stop;
@@ -1144,6 +1162,7 @@ export function mountPresent({ store, playback, ledger, rail, modelOf, frameOf, 
     close,
     prepare: runPrepare,
     destroy() {
+      destroyed = true;
       unbindKeys();
       rail.removeEventListener("keyup", onRailKeyup);
       stopWatch();

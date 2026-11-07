@@ -12,7 +12,6 @@ import {routeHref} from '../src/ui/routes.js';
 import {createSetup,encodeSetup} from '../src/ui/setup-codec.js';
 import {defaultStreetConfig} from '../src/model/street-simulation.js';
 import {getRegionalSetup} from '../src/ui/regional-setup.js';
-import {presetById} from '../src/model/presets.js';
 
 function setup() {
   const restore = installFakeDom();
@@ -20,7 +19,7 @@ function setup() {
   document.body.appendChild(root);
   const store = createStore(createInitialState({ presetId: "bay_teaching_map", scenario: defaultScenario() }));
   const calls = [];
-  const app = { root, store, playback: { pause: () => calls.push("pause") }, present: { open: () => calls.push("present"), close: () => calls.push("close") } };
+  const app = { root, store, playback: { pause: () => calls.push("pause") }, present: { open: () => calls.push("present"), close: () => calls.push("close"), prepare: options => calls.push(options) } };
   const studio = mountStudio(app);
   return { restore, root, store, calls, studio };
 }
@@ -101,6 +100,7 @@ test("walkthrough uses the existing presenter and returning does not erase its s
   try {
     x.studio.navigate("tour");
     assert.ok(x.calls.includes("present"));
+    assert.ok(x.calls.some(call=>call?.focus===false),'arrival prepares the existing walkthrough without moving focus');
     assert.equal(x.root.hidden, false);
     x.studio.navigate("approach");
     assert.equal(x.root.hidden, true);
@@ -284,13 +284,13 @@ test('compact navigation exposes its state and closes after a destination is cho
  }finally{x.studio.destroy();x.restore();}
 });
 
-test('confirmed defect: walkthrough entry after Four-area experiments names the setup the map shows until Prepare',()=>{
+test('walkthrough entry explains browser preparation and requests it without taking focus',()=>{
   const x=setup();try{
     x.studio.navigate('depots');x.studio.navigate('tour');
-    assert.equal(x.store.getState().presetId,'UC-08a','entering the walkthrough keeps the depot setup');
     const intro=x.studio.element.querySelector('.workspace-intro').textContent;
-    assert.match(intro,/OPS-01 asks/);assert.ok(intro.includes(presetById('UC-08a').title),'the intro names the loaded UC-08a setup');
-    x.studio.navigate('approach');x.studio.navigate('tour');assert.ok(x.studio.element.querySelector('.workspace-intro').textContent.includes(presetById('UC-08a').title));
+    assert.match(intro,/OPS-01 asks/);assert.match(intro,/prepares here in your browser/);
+    assert.ok(x.calls.some(call=>call?.focus===false));
+    x.studio.navigate('approach');x.studio.navigate('tour');assert.equal(x.calls.filter(call=>call?.focus===false).length,2);
   }finally{x.studio.destroy();x.restore();}
 });
 test('confirmed at base, closed by the Task 3 pause clear: Depot flow lab announcements do not survive leaving the page',async()=>{

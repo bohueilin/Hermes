@@ -8,7 +8,7 @@ import { describe, test } from "node:test";
 
 import { percentileFleetLab } from "../src/core/stats.js";
 import { armScenarios, experimentEnvelope } from "../src/model/experiment.js";
-import { presetById, seedSet } from "../src/model/presets.js";
+import { seedSet } from "../src/model/presets.js";
 import { sharedLambdaMaxPermille } from "../src/model/world.js";
 import { tabbables } from "../src/ui/a11y.js";
 import { REGION_IDS, ROW_CHARTS, SANDBOX_REPLICATIONS, start } from "../src/ui/app.js";
@@ -639,12 +639,13 @@ describe("the walkthrough layer (demo plan section 4.1)", () => {
       const strips = find('[data-role="strips"]');
       find('[data-role="present-toggle"]').click();
       assert.equal(app.regions.ledger.hidden, false);
-      assert.equal(app.regions.rail.hidden, false);
-      assert.equal(app.regions.map.hidden, false, "the map region is the stage");
+      assert.equal(app.regions.rail.hidden, true, "story controls wait behind the preparation state");
+      assert.equal(app.regions.map.hidden, true, "the map waits until both walkthrough runs land");
       assert.equal(strips.hidden, false, "the strips container stays, with its strips hidden");
       for (const node of [app.regions.knobs, app.regions.charts, app.regions.segmented]) assert.equal(node.hidden, true);
       assert.equal(root.querySelector(".fl-side").hidden, true);
-      for (const id of ["ledger", "rail"]) assert.equal(app.regions[id].hasAttribute("inert"), false);
+      assert.equal(app.regions.ledger.hasAttribute("inert"), false);
+      assert.equal(app.regions.rail.hasAttribute("inert"), true);
       // Leaving restores the page it was, and puts the reader back on the control that opened it.
       find('[data-role="present-toggle"]').click();
       for (const node of [app.regions.knobs, app.regions.charts]) assert.equal(node.hidden, false);
@@ -654,10 +655,12 @@ describe("the walkthrough layer (demo plan section 4.1)", () => {
     }));
 
   test("while presenting, the ledger and the rail hold the only tab stops of the regions they replace", () =>
-    withApp({}, ({ root, app }) => {
+    withApp({}, ({ root, app, store }) => {
       const stops = () => tabbables(root);
       assert.equal(stops().some((node) => app.regions.rail.contains(node)), false, "a closed walkthrough holds no tab stop");
       root.querySelector('[data-role="present-toggle"]').click();
+      assert.equal(stops().some((node) => app.regions.rail.contains(node)), false, "unprepared story controls are not tab stops");
+      store.dispatch({type:'present/prepared'});
       const open = stops();
       assert.ok(open.some((node) => app.regions.rail.contains(node)), "the rail is reachable");
       for (const id of ["knobs", "charts"]) {
@@ -733,13 +736,13 @@ describe("the walkthrough layer (demo plan section 4.1)", () => {
       const { app, host, store, find } = ctx;
       store.dispatch({ type: "mode/set", mode: "experiment" });
       find('[data-role="present-toggle"]').click();
-      assert.match(find('[data-role="mode-help"]').textContent, /Current mode: Experiment/);
-      assert.match(find('[data-role="mode-help"]').textContent, /Prepare replaces the current experiment/);
+      assert.match(find('[data-role="mode-help"]').textContent, /Guided walkthrough/);
+      assert.equal(find('.fl-modes').hidden,true,'presenter controls have one context');
       const prepared = app.present.prepare();
       const windowCall = host.last("run_window");
       assert.equal(store.getState().presetId, "OPS-01");
       assert.equal(store.getState().mode, "sandbox", "the situation is set up in Sandbox, where the walk watches it");
-      assert.match(find('[data-role="mode-help"]').textContent, /Current mode: Sandbox/);
+      assert.match(find('[data-role="mode-help"]').textContent, /computed results/);
       assert.doesNotMatch(find('[data-role="mode-help"]').textContent, /remains saved/);
       assert.deepEqual(windowCall.args.seeds, seedSet(1, SANDBOX_REPLICATIONS));
       assert.equal(windowCall.args.logSeed, 1001);
@@ -876,28 +879,71 @@ describe("honesty copy on the page (review: honesty-copy lens)", () => {
     }));
 });
 
-describe("walkthrough entry label (confirmed defect)", () => {
-  const agree = ({ app, root, store }) => {
+describe("walkthrough arrival preparation", () => {
+  const agree = ({ app, root, store, host }) => {
     assert.equal(store.getState().present.prepared, false);
-    const world = root.querySelector('[data-role="world-line"]').textContent;
     const intro = app.studio.element.querySelector(".workspace-intro").textContent;
-    const shown = presetById(store.getState().run.log !== null ? store.getState().run.worldAtQueue.presetId : store.getState().presetId).title;
-    assert.ok(world.includes(shown), world);
-    assert.ok(world.includes("OPS-01") || intro.includes(shown), `intro names only OPS-01 while the map shows ${world}`);
+    assert.match(intro,/OPS-01 asks/);assert.equal(store.getState().presetId,'OPS-01');
+    assert.ok(host.last('run_window'),'arrival starts the actual default run');
+    assert.equal(app.regions.map.hidden,true,'no stale map or repeated unavailable values during preparation');
+    assert.equal(root.querySelector('[data-role="present-figures"]').hidden,true);
   };
-  test("after Four-area experiments, the intro and the map world line name the same setup before Prepare", () =>
+  test("after Four-area experiments, arrival starts OPS-01 behind one preparation state", () =>
     withApp({ studio: true }, (ctx) => {
       ctx.app.studio.navigate("depots");
       ctx.app.studio.navigate("tour");
       agree(ctx);
     }));
-  test("after a Run window, then Four-area experiments, the intro names the run's world that the map shows", () =>
+  test("after another run, arrival prepares OPS-01 and does not show the old world", () =>
     withApp({ studio: true }, async (ctx) => {
       ctx.app.studio.navigate("operations");
       await finishWindow(ctx);
       ctx.app.studio.navigate("depots");
       ctx.app.studio.navigate("tour");
-      assert.equal(ctx.store.getState().presetId, "UC-08a");
       agree(ctx);
+    }));
+  test('leaving while the first run is pending does not start its paired follow-up or move focus',()=>
+    withApp({studio:true},async ctx=>{
+      ctx.app.studio.navigate('tour');const call=ctx.host.last('run_window');
+      ctx.app.studio.navigate('approach');const focused=ctx.doc.activeElement;
+      call.resolve(await ops01Payload({seeds:call.args.seeds,logSeed:call.args.logSeed}));await tick();
+      assert.equal(ctx.host.last('run_experiment'),undefined);assert.equal(ctx.store.getState().playing,false);assert.equal(ctx.doc.activeElement,focused);
+    }));
+  test('a failed arrival run exposes retry without running a paired experiment or showing old values',()=>
+    withApp({studio:true},async ctx=>{
+      ctx.app.studio.navigate('tour');ctx.host.last('run_window').reject(Error('worker failed'));await tick();
+      assert.equal(ctx.host.last('run_experiment'),undefined);assert.equal(ctx.store.getState().present.prepared,false);
+      assert.match(ctx.find('[data-role="present-prepare-status"]').textContent,/could not finish both runs/);
+      assert.equal(ctx.app.regions.map.hidden,true);assert.equal(ctx.find('[data-role="present-prepare"]').disabled,false);
+    }));
+  test('leave and immediate re-entry during the window cannot mix an OPS replay with a depot experiment',()=>
+    withApp({studio:true},async ctx=>{
+      ctx.app.studio.navigate('tour');const first=ctx.host.last('run_window');
+      ctx.app.studio.navigate('depots');ctx.app.studio.navigate('tour');const second=ctx.host.last('run_window');
+      assert.notEqual(second.id,first.id,'re-entry starts a new preparation generation');
+      first.resolve(await ops01Payload({seeds:first.args.seeds,logSeed:first.args.logSeed}));await tick();
+      assert.equal(ctx.host.last('run_experiment'),undefined,'the superseded window cannot freeze a new draft');
+      assert.equal(ctx.store.getState().present.prepared,false);assert.equal(ctx.find('[data-role="present-prepare"]').disabled,true);
+      second.resolve(await ops01Payload({seeds:second.args.seeds,logSeed:second.args.logSeed}));await tick();
+      const paired=ctx.host.last('run_experiment');const expected=frozenExperiment({presetId:'OPS-01',replications:20});
+      assert.deepEqual(paired.args.spec,expected.spec);paired.resolve(await experimentPayload({presetId:'OPS-01',replications:20}));await tick();
+      assert.equal(ctx.store.getState().present.prepared,true);assert.equal(ctx.store.getState().run.id,second.id);
+      assert.equal(ctx.store.getState().experiment.frozen.digest,expected.digest);assert.equal(ctx.store.getState().playing,false);
+    }));
+  test('a superseded paired run cannot complete the new preparation and changed setups invalidate prepared state',()=>
+    withApp({studio:true},async ctx=>{
+      ctx.app.studio.navigate('tour');const first=ctx.host.last('run_window');
+      first.resolve(await ops01Payload({seeds:first.args.seeds,logSeed:first.args.logSeed}));await tick();const oldPair=ctx.host.last('run_experiment');
+      ctx.app.studio.navigate('depots');ctx.app.studio.navigate('tour');const second=ctx.host.last('run_window');
+      oldPair.resolve(await experimentPayload({presetId:'OPS-01',replications:20}));await tick();
+      assert.equal(ctx.store.getState().present.prepared,false,'old paired completion cannot enable the new story');
+      assert.equal(ctx.find('[data-role="present-prepare"]').disabled,true);
+      second.resolve(await ops01Payload({seeds:second.args.seeds,logSeed:second.args.logSeed}));await tick();
+      ctx.host.last('run_experiment').resolve(await experimentPayload({presetId:'OPS-01',replications:20}));await tick();
+      assert.equal(ctx.store.getState().present.prepared,true);
+      ctx.app.studio.navigate('approach');ctx.app.studio.navigate('tour');assert.equal(ctx.host.last('run_window').id,second.id,'unchanged prepared results are reused');
+      ctx.app.studio.navigate('depots');ctx.store.dispatch({type:'experiment/draft',patch:{question:'A different question'}});
+      assert.equal(ctx.store.getState().present.prepared,false,'a changed draft invalidates the old preparation');
+      ctx.app.studio.navigate('tour');assert.notEqual(ctx.host.last('run_window').id,second.id,'changed setup is prepared again');
     }));
 });

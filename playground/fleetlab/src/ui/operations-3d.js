@@ -29,24 +29,24 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  const renderer=createRenderer(canvas);let mode=renderer?'3d':'flat';
  const status=el('span',{class:'bay-render-status'},renderer?'3D · WebGL':'Flat map · WebGL unavailable');
  const viewSelect=el('select',{'aria-label':'Map view',on:{change:()=>{mode=viewSelect.value;redraw();}}},[el('option',{value:'3d',disabled:!renderer},'3D perspective'),el('option',{value:'flat'},'Flat map')]);viewSelect.value=mode;
- const corridor=places.filter(p=>['san-francisco','sfo','san-mateo','palo-alto'].includes(p.id));
+ const corridor=places.filter(p=>['san-francisco','sfo','san-mateo'].includes(p.id));
  const hasCorridor=corridor.length>=2;
  const focusSelect=el('select',{'aria-label':'Focus map on a city',on:{change:()=>focus(focusSelect.value)}},[el('option',{value:'all'},'Entire Bay Area'),...(hasCorridor?[el('option',{value:'corridor'},'SF / SFO / Peninsula')]:[]),...places.map(p=>el('option',{value:p.id},p.label))]);
  const labelSelect=el('select',{'aria-label':'City label density',on:{change:()=>redraw()}},[el('option',{value:'key'},'Key place names'),el('option',{value:'all'},'All 18 names'),el('option',{value:'none'},'Roads & cars only')]);
- const controls=el('div',{class:'bay-map-controls'},[viewSelect,focusSelect,labelSelect,button('−',()=>changeCamera({zoom:1.25})),button('+',()=>changeCamera({zoom:.8})),button('Rotate ↶',()=>changeCamera({yaw:-.3})),button('Rotate ↷',()=>changeCamera({yaw:.3})),button('Tilt',()=>{camera.pitch=camera.pitch>1.1?.7:1.3;redraw();}),button('Follow selected car',()=>{following=true;overview=false;camera.distance=6;redraw();}),button('Reset view',()=>focus('all'))]);
+ const controls=el('div',{class:'bay-map-controls'},[viewSelect,focusSelect,labelSelect,button('−',()=>changeCamera({zoom:1.25})),button('+',()=>changeCamera({zoom:.8})),button('Rotate ↶',()=>changeCamera({yaw:-.3})),button('Rotate ↷',()=>changeCamera({yaw:.3})),button('Tilt',()=>{camera.pitch=camera.pitch>1.1?.7:1.3;redraw();}),button('Follow selected car',()=>{following=true;overview=false;corridorView=false;camera.distance=6;redraw();}),button('Reset view',()=>focus('all'))]);
  let legendPinned=null,legendHover=null,legendFocus=null;
  const legendColor=()=>legendHover??legendFocus??legendPinned;
  const legendButton=(name,value)=>{const b=button(name,()=>{legendPinned=legendPinned===value?null:value;for(const n of element.querySelectorAll('[data-legend-color]'))n.setAttribute('aria-pressed',String(n.getAttribute('data-legend-color')===legendPinned));redraw();});b.setAttribute('data-legend-state',name.replaceAll(' ','_'));b.setAttribute('data-legend-color',value);b.setAttribute('aria-pressed','false');b.insertBefore(el('span',{'aria-hidden':'true',style:`background:${value}`,class:'legend-swatch'}),b.firstChild);for(const [event,fn] of Object.entries({pointerenter:()=>legendHover=value,pointerleave:()=>legendHover=null,focus:()=>legendFocus=value,blur:()=>legendFocus=null}))b.addEventListener(event,()=>{fn();redraw();});return b;};
- const element=el('figure',{class:'bay-map'},[controls,el('div',{class:'bay-map-caption-top'},[status,el('span',{},'Drag to orbit · scroll to zoom · choose a city to inspect')]),viewport,
+ const element=el('figure',{class:'bay-map'},[controls,el('div',{class:'bay-map-caption-top'},[status,el('span',{},'Activity key · scroll for all states; select to highlight')]),
   el('ul',{class:'bay-map-legend','aria-label':'Map legend'},[...Object.entries(ACTIVITY_COLORS).filter(([key])=>key!=='ready').map(([key,value])=>[key.replaceAll('_',' '),value]),['waiting for a resource','#a87560'],['unclassified activity','#555b65'],['Hypothetical depot','#4c7666']].map(([name,value])=>el('li',{},name==='Hypothetical depot'?[el('span',{'aria-hidden':'true',class:'legend-swatch legend-depot',style:`background:${value}`}),name]:legendButton(name,value)))),
-  el('figcaption',{},[el('a',{href:'https://www.openstreetmap.org/copyright',target:'_blank',rel:'noopener noreferrer'},'© OpenStreetMap contributors'),el('span',{},' · ODbL. Frozen September 2026 extract. Sparse major-road routes; one-way and access rules excluded. Cars and hypothetical depots are enlarged; stationary cars are spread into display slots around their recorded anchor. Grid spacing: 5 km. Coastlines are sourced outlines; no terrain or water polygons. Traffic and demand are simulated. This is not a commercial service-area map.')])]);
+  viewport,el('figcaption',{},[el('a',{href:'https://www.openstreetmap.org/copyright',target:'_blank',rel:'noopener noreferrer'},'© OpenStreetMap contributors'),el('span',{},' · ODbL. Frozen September 2026 extract. Sparse major-road routes; one-way and access rules excluded. Cars and hypothetical depots are enlarged; stationary cars are spread into display slots around their recorded anchor. Grid spacing: 5 km. Coastlines are sourced outlines; no terrain or water polygons. Traffic and demand are simulated. This is not a commercial service-area map.')])]);
  if(onDownloadMap)element.appendChild(button('Download attributed map data',onDownloadMap));
  const xs=places.map(p=>p.x),ys=places.map(p=>p.y);
  const bounds={minX:Math.min(...xs,0)-3,maxX:Math.max(...xs,10)+3,minY:Math.min(...ys,0)-3,maxY:Math.max(...ys,10)+3};
  const center=[(bounds.minX+bounds.maxX)/2,(bounds.minY+bounds.maxY)/2,0];
  let camera={target:[...center],distance:Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY)*1.12,yaw:0,pitch:.9};
- if(hasCorridor){const x=corridor.map(p=>p.x),y=corridor.map(p=>p.y);camera.target=[(Math.min(...x)+Math.max(...x))/2,(Math.min(...y)+Math.max(...y))/2,0];camera.distance=Math.max(Math.max(...x)-Math.min(...x),Math.max(...y)-Math.min(...y))*1.5;focusSelect.value='corridor';}
- let current=null,selected=null,drag=null,destroyed=false,lastFlatKey=null,hitPoints=[],following=false,overview=!hasCorridor,contextLost=false;
+ if(hasCorridor){const x=corridor.map(p=>p.x),y=corridor.map(p=>p.y);camera.target=[(Math.min(...x)+Math.max(...x))/2,(Math.min(...y)+Math.max(...y))/2,0];focusSelect.value='corridor';}
+ let current=null,selected=null,drag=null,destroyed=false,lastFlatKey=null,hitPoints=[],following=false,overview=!hasCorridor,corridorView=hasCorridor,contextLost=false;
  const labelNodes=new Map();for(const p of places){const label=button(p.label,()=>{focus(p.id);onFocus(p.id);});label.setAttribute('class',`bay-city-label${p.kind==='airport'?' is-airport':''}`);label.setAttribute('data-place-id',p.id);overlay.appendChild(label);labelNodes.set(p.id,label);}
  const meshes={ipace:buildCarMesh('ipace','#f3f5ec'),ojai:buildCarMesh('ojai','#d8e3f3')};
  const dimMeshes=Object.fromEntries(Object.entries(meshes).map(([key,m])=>[key,m.map((v,i)=>i%6<3?v:.84)]));
@@ -60,8 +60,8 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  flat.style.background='#cbd5c8';
  const flatRoads=svg('g'),flatCars=svg('g');flat.appendChild(flatRoads);flat.appendChild(flatCars);
  const vehicleNodes=new Map();
- function changeCamera(change){overview=false;camera=orbitCamera(camera,change);redraw();}
- function focus(id){if(id==='corridor'&&hasCorridor){following=false;overview=false;const xs=corridor.map(p=>p.x),ys=corridor.map(p=>p.y);camera.target=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2,0];camera.distance=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))*1.5;focusSelect.value=id;redraw();return;}following=false;overview=id==='all';focusSelect.value=id;const p=places.find(p=>p.id===id);camera={...camera,target:p?[p.x,p.y,0]:[...center],distance:p?8:Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY)*1.12};redraw();}
+ function changeCamera(change){overview=false;corridorView=false;camera=orbitCamera(camera,change);redraw();}
+ function focus(id){corridorView=id==='corridor';if(id==='corridor'&&hasCorridor){following=false;overview=false;const xs=corridor.map(p=>p.x),ys=corridor.map(p=>p.y);camera.target=[(Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2,0];focusSelect.value=id;redraw();return;}following=false;overview=id==='all';focusSelect.value=id;const p=places.find(p=>p.id===id);camera={...camera,target:p?[p.x,p.y,0]:[...center],distance:p?8:Math.max(bounds.maxX-bounds.minX,bounds.maxY-bounds.minY)*1.12};redraw();}
  function placeLabels(project,width,height){
   leaders.setAttribute('viewBox',`0 0 ${width} ${height}`);leaders.replaceChildren();const occupied=[];
   const ordered=[...places].sort((a,b)=>(b.id===focusSelect.value)-(a.id===focusSelect.value));
@@ -93,6 +93,7 @@ export function createOperations3D({places=[],mapData={},onSelect=()=>{},onFocus
  function redraw(){
   if(destroyed)return;
   const width=Math.max(280,viewport.clientWidth||900),height=Math.max(320,viewport.clientHeight||580);
+  if(corridorView){camera.yaw=width>height?-.8:0;const x=corridor.map(p=>p.x),y=corridor.map(p=>p.y);camera.distance=Math.max(Math.max(...y)-Math.min(...y),(Math.max(...x)-Math.min(...x))/(width/height))*.9;if(mode==='3d')camera=fitCameraToPoints(camera,corridor.map(p=>[p.x,p.y,0]),width,height);else camera.distance=Math.max((Math.max(...x)-Math.min(...x))/1.2,(Math.max(...y)-Math.min(...y))*width/height/1.2)*1.12;}
   if(overview){camera.distance=Math.max(bounds.maxY-bounds.minY,(bounds.maxX-bounds.minX)/(width/height))*1.16;camera=fitCameraToPoints(camera,places.map(p=>[p.x,p.y,0]),width,height);}
   canvas.hidden=mode!=='3d';flat.style.display=mode==='flat'?'block':'none';
   status.textContent=mode==='3d'?'3D · WebGL':contextLost?'Flat map · 3D context unavailable':renderer?'Flat map':'Flat map · WebGL unavailable';

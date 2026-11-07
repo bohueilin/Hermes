@@ -10,6 +10,9 @@ test('coverage projection distinguishes eligible populations and does not let ex
  assert.deepEqual(a.counts,{included:1,unsupported:1,excluded:1});
  assert.deepEqual(a.paths,b.paths);assert.match(a.paths.included,/^M/);assert.match(a.paths.unsupported,/^M/);
  assert.notEqual(a.paths.included,a.paths.unsupported);
+ assert.ok(a.sample.viewBox.split(' ').map(Number).every(Number.isFinite));
+ assert.ok(Number(a.sample.viewBox.split(' ')[2])<800,'sample is closer than full-network extent');
+ assert.equal(a.sample.hasGap,true);
  assert.ok(!JSON.stringify(a.paths).includes('NaN'));
  assert.deepEqual(sample.features[0].geometry.coordinates,[[-122.5,37.7],[-122.4,37.8]],'source data is not transformed in place');
 });
@@ -35,15 +38,20 @@ test('hosted atlas toggles checked coverage, follows version switches and remain
   Object.defineProperty(document,'baseURI',{value:'https://example.test/city-explorer/releases/test/',configurable:true});
   const el=(tag,attrs={},text='')=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);n.textContent=text;return n;};
   const atlas=el('section',{id:'atlas-view'}),bar=el('div',{class:'atlas-version-bar'}),stage=el('div',{class:'atlas-map-stage'});
+  for(const id of ['flat-toggle','inspect-gap'])atlas.appendChild(el('button',{id}));atlas.appendChild(el('select',{id:'atlas-arm'}));atlas.appendChild(el('button',{'data-mask':'source'}));
   for(const id of ['recorded-map','candidate-map','temporal-map'])bar.appendChild(el('button',{id,'aria-pressed':String(id==='recorded-map')}));atlas.append(bar,stage);document.body.appendChild(atlas);
   const values={'data/source-roads.geo.json':sample,'data/candidate-roads.geo.json':{...sample,features:sample.features.slice(0,1)},'data/temporal-summary.json':{report:{timed_turn_count:175,timed_access_count:32,before:{unsupported_fraction:.0132},after:{unsupported_fraction:.0099}}}};
   const records=Object.fromEntries(Object.entries(values).map(([k,v])=>{const bytes=new TextEncoder().encode(JSON.stringify(v));return[k,{bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')}];}));
   document.defaultView.fetch=async url=>{const path=new URL(url).pathname.split('/test/')[1];return{ok:true,json:async()=>({files:records}),arrayBuffer:async()=>new TextEncoder().encode(JSON.stringify(values[path])).buffer};};
   brand.decorateAtlasCoverage(document);brand.decorateAtlasCoverage(document);
   const button=atlas.querySelector('[aria-controls="atlas-coverage-detail"]');assert.ok(button);assert.equal(atlas.querySelectorAll('.atlas-scope-badge').length,1);
-  button.click();await new Promise(r=>setTimeout(r,30));assert.equal(stage.hidden,true);assert.equal(atlas.querySelectorAll('svg path').length,2);assert.match(atlas.querySelector('[role="status"]').textContent,/SF v1: 1 unsupported/);
+  await new Promise(r=>setTimeout(r,30));assert.equal(stage.hidden,true);assert.equal(atlas.querySelectorAll('svg path').length,2);assert.match(atlas.querySelector('[role="status"]').textContent,/SF v1: 1 unsupported/);
+  const drawing=atlas.querySelector('svg');assert.notEqual(drawing.getAttribute('viewBox'),'0 0 800 600');
+  atlas.querySelector('[data-coverage-layer="unsupported"]').click();assert.equal(drawing.getAttribute('data-layer'),'unsupported');
+  atlas.querySelector('[data-coverage-view="full"]').click();assert.equal(drawing.getAttribute('viewBox'),'0 0 800 600');
   document.getElementById('candidate-map').setAttribute('aria-pressed','true');notify([{type:'attributes'}]);await new Promise(r=>setTimeout(r,30));assert.match(atlas.querySelector('[role="status"]').textContent,/SF v2: 0 unsupported/);
   assert.match(atlas.querySelector('.atlas-version-context').textContent,/175 timed turn rules, 32 way-access schedules/);
   button.click();assert.equal(stage.hidden,false);assert.equal(atlas.querySelector('.atlas-coverage-detail').hidden,true);
+  for(const [selector,event]of [['#flat-toggle','click'],['#inspect-gap','click'],['#atlas-arm','change'],['[data-mask]','click']]){button.click();assert.equal(stage.hidden,true);atlas.querySelector(selector).dispatchEvent(new Event(event));assert.equal(stage.hidden,false,`${selector} reveals its interactive result`);assert.equal(atlas.querySelector('.atlas-coverage-detail').hidden,true);}
  }finally{globalThis.MutationObserver=priorObserver;restore();}
 });

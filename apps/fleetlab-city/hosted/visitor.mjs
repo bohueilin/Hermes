@@ -39,8 +39,8 @@ const diagram=(file,alt)=>el('figure',{class:'visitor-diagram'},[el('img',{src:'
 const flow=doc.querySelector('.flow-hero');
 if(flow&&!flow.hasAttribute('data-diagram-observed')){
  flow.setAttribute('data-diagram-observed','');
- const draw=()=>{const question=flow.querySelector('.flow-question');if(!question||flow.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');flow.appendChild(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'));};
- draw();new MutationObserver(draw).observe(flow,{childList:true});
+ const draw=()=>{for(const cell of flow.querySelectorAll('.flow-setup-table th,.flow-setup-table td')){const before=cell.textContent,after=before==='Due'?'Due (min)':before==='After upload'?'Local step':before==='Already at target'?'At target':before.replace(/^due at minute ([0-9.]+)$/,'$1').replace(/^([0-9.]+) min local step$/,'$1 min');if(after!==before)cell.textContent=after;}const question=flow.querySelector('.flow-question');if(!question||flow.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');flow.appendChild(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'));};
+ draw();new MutationObserver(draw).observe(flow,{childList:true,subtree:true});
 }
 const dispatch=doc.querySelector('.bench>#chapter-copy');
 if(dispatch&&!doc.querySelector('.dispatch-concept')){const figure=diagram('D-05-opportunity-cost.webp','Dispatching the car now strands the next rider.');figure.classList.add('dispatch-concept');figure.querySelector('img').setAttribute('loading','lazy');dispatch.parentNode.insertBefore(figure,dispatch.nextSibling);}
@@ -112,10 +112,11 @@ if(catalog&&!doc.getElementById('visitor-families')){
  results.appendChild(el('summary',{},'Browse the lesson library'));
 
  if(resultTitle){let part=resultTitle;while(part){const next=part.nextSibling;results.appendChild(part);if(part.classList.contains('catalog-grid'))break;part=next;}}
- const buttons=QUESTION_FAMILIES.map(f=>{
+ const buttons=QUESTION_FAMILIES.map((f,index)=>{
   const b=el('button',{type:'button',class:'visitor-family','data-family':f.id,'aria-pressed':'false','aria-controls':'visitor-library'},[
    el('span',{class:'visitor-family-title'},f.title),el('span',{class:'visitor-family-question'},f.question),art(f.tile),el('span',{class:'visitor-family-count'},`${f.lessons.length} lessons`),
   ]);
+  if(index<3)b.querySelector('img').setAttribute('loading','eager');
   b.addEventListener('click',()=>{
    const wasSelected=b.getAttribute('aria-pressed')==='true';select(wasSelected?null:f);
    results.open=true;
@@ -184,7 +185,7 @@ if(welcome&&!doc.getElementById('visitor-city-path')){
  welcome.insertBefore(ribbon,comparison?.nextSibling??null);
 }
 for(const hero of doc.querySelectorAll('.visitor-purpose,.ops-intro,.street-intro,.catalog-intro,.approach-intro'))hero.classList.add('lab-hero');
-for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.insertBefore(link,hero.querySelector('.hero-lede')?.nextSibling??null);}const image=art(file);image.setAttribute('loading','eager');image.setAttribute('fetchpriority','high');hero.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));}}
+for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.insertBefore(link,hero.querySelector('.hero-lede')?.nextSibling??null);}const image=art(file);image.setAttribute('loading','eager');image.setAttribute('fetchpriority','high');hero.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));if(selector==='.street-intro'){const copy=el('div',{class:'visitor-street-copy'});for(const child of [...hero.children])if(!child.classList.contains('visitor-hero-art'))copy.appendChild(child);hero.insertBefore(copy,hero.firstChild);}}}
 if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
 const motionControl=doc.querySelector('.visitor-motion-control'),footer=doc.querySelector('.studio-header,header.masthead')??doc.querySelector('footer');
 if(motionControl&&footer&&motionControl.parentNode!==footer)footer.appendChild(motionControl);

@@ -9,6 +9,19 @@ import {pairLesson} from '../web/view-model.mjs';
 function node(tag,attrs={},text=''){
  const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);n.textContent=text;return n;
 }
+test('hosted Depot Flow keeps deadline minutes and task durations readable after rerender',()=>{
+ const restore=installFakeDom(),prior=globalThis.MutationObserver;const updates=[];
+ globalThis.MutationObserver=class{constructor(fn){updates.push(fn);}observe(){}};
+ try{
+  const hero=node('section',{class:'flow-hero'}),question=node('div',{class:'flow-question'}),table=node('table',{class:'flow-setup-table'});
+  const headers=['Due','After upload'].map(t=>node('th',{},t)),cells=['due at minute 15','2 min local step','Already at target'].map(t=>node('td',{},t));
+  table.append(...headers,...cells);hero.append(question,table);document.body.appendChild(hero);decorateVisitors(document);
+  assert.deepEqual(headers.map(n=>n.textContent),['Due (min)','Local step']);
+  assert.deepEqual(cells.map(n=>n.textContent),['15','2 min','At target']);
+  cells[0].textContent='due at minute 5';for(const update of updates)update([]);assert.equal(cells[0].textContent,'5');
+  assert.equal(hero.querySelectorAll('.visitor-diagram').length,1);
+ }finally{globalThis.MutationObserver=prior;restore();}
+});
 test('Home keeps its thesis, first action, byline and three-stop tour in the approved order',()=>{
  const restore=installFakeDom();try{
   const home=node('main',{class:'studio-overview'});document.body.appendChild(home);

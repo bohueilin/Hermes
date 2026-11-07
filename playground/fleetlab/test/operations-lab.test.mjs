@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createOperationsLab, operationsClock } from '../src/ui/operations-lab.js';
+import { createOperationsLab, operationsClock, busyReplayMinute } from '../src/ui/operations-lab.js';
 import { installFakeDom } from './helpers/fake-dom.mjs';
+
+test('the replay opens at the earliest busiest recorded travel minute without changing records',()=>{
+  const frames=[{minute:0,vehicles:[{state:'available'}]},{minute:1,vehicles:[{from:'a',to:'b'},{state:'charging'}]},{minute:2,vehicles:[{from:'a',to:'b'},{from:'b',to:'a'}]},{minute:3,vehicles:[{from:'a',to:'b'},{from:'b',to:'a'}]}];
+  const before=JSON.stringify(frames);
+  assert.equal(busyReplayMinute(frames),2);assert.equal(busyReplayMinute([]),0);
+  assert.equal(busyReplayMinute([{minute:0,vehicles:[]},{minute:1,vehicles:[]}]),0);
+  assert.equal(JSON.stringify(frames),before);
+});
 
 test('a day runs only on request; reduced motion stays paused and edited results are marked stale', async()=>{
   const restore=installFakeDom();

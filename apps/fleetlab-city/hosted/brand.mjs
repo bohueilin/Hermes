@@ -3,14 +3,13 @@ import {decorateVisitors,node} from './visitor.mjs';
 const media='/site-media/';
 export function decorateDesign(doc=document){
 const el=(...args)=>node(doc,...args);
+decorateShell(doc);
 const mark=()=>el('img',{src:media+'fleetlab-logo.png',srcset:media+'fleetlab-logo-64.png 64w, '+media+'fleetlab-logo-128.png 128w, '+media+'fleetlab-logo.png 256w',sizes:'(max-width:767px) 48px, 64px',alt:'',width:'64',height:'64',decoding:'async'});
 for(const brand of doc.querySelectorAll('header .studio-monogram,header .delivery-brand,header a.brand')){
  if(brand.getAttribute('data-art-logo'))continue;
  brand.setAttribute('data-art-logo','true');brand.classList.add('design-brand');brand.setAttribute('aria-label','FleetLab home');
  brand.replaceChildren(mark(),el('strong',{},'FleetLab'));
 }
-const masthead=doc.querySelector('header.masthead');
-if(masthead&&!masthead.querySelector('.design-global-nav'))masthead.insertBefore(el('nav',{class:'design-global-nav','aria-label':'FleetLab navigation'},[['Home','home'],['Fleet day','fleet-day'],['Street lab','street-lab'],['Explore','catalog'],['About & limits','approach']].map(([label,route])=>el('a',{href:'/#/'+route},label))),masthead.querySelector('.tabs'));
 for(const footer of doc.querySelectorAll('footer'))if(!footer.querySelector('.design-footer-mark'))footer.insertBefore(el('a',{href:'/#/home',class:'design-footer-mark','aria-label':'FleetLab home'},[mark(),el('strong',{},'FleetLab')]),footer.firstChild);
 let footer=doc.querySelector('.studio-footer')??doc.querySelector('footer');
 if(!footer&&!doc.getElementById('fleetlab-root')){footer=el('footer');doc.body.appendChild(footer);}
@@ -52,8 +51,62 @@ if(hero&&!doc.getElementById('design-network-lesson')){
  ]);hero.appendChild(art);
 }
 decorateVisitors(doc);
+const motion=doc.querySelector('.visitor-motion-control'),shell=doc.querySelector('header.design-shell');
+if(motion&&shell&&motion.parentNode!==shell)shell.appendChild(motion);
+decorateCityOrientation(doc);
 decorateDepotPipes(doc);
 decorateAtlasCoverage(doc);
+}
+
+// One global shell; City section controls stay local to the City content.
+export function decorateShell(doc=document){
+ const el=(...a)=>node(doc,...a),main=doc.querySelector('main');
+ let header=doc.querySelector('header');
+ const sources=/Map data & licenses/.test(doc.title??doc.querySelector('title')?.textContent??'');
+ if(!header&&sources&&main){header=el('header',{},el('a',{class:'brand',href:'/#/home'},'FleetLab'));doc.body.insertBefore(header,main);}
+ if(header&&!header.classList.contains('design-shell')){
+  header.classList.add('design-shell');
+  const tabs=header.querySelector('.tabs'),intro=main?.querySelector('.intro');
+  if(tabs&&main){tabs.classList.add('design-local-nav');main.insertBefore(tabs,intro?intro.nextSibling:main.firstChild);}
+  if(!header.classList.contains('studio-header')){
+   for(const nav of header.querySelectorAll('nav'))nav.remove();
+   const nav=el('nav',{id:'design-navigation',class:'design-global-nav','aria-label':'Main navigation','data-expanded':'false'},[['Home','home'],['Fleet day','fleet-day'],['Street lab','street-lab'],['Explore','catalog'],['About & limits','approach']].map(([label,route])=>el('a',{href:'/#/'+route},label)));
+   const menu=el('button',{type:'button',class:'design-shell-menu','aria-controls':'design-navigation','aria-expanded':'false'},'Menu');
+   const toggle=open=>{menu.setAttribute('aria-expanded',String(open));menu.textContent=open?'Close':'Menu';nav.setAttribute('data-expanded',String(open));};
+   menu.addEventListener('click',()=>toggle(menu.getAttribute('aria-expanded')!=='true'));
+   header.addEventListener('keydown',event=>{if(event.key==='Escape'){toggle(false);menu.focus();}});
+   header.appendChild(menu);header.appendChild(nav);
+  }
+ }
+ let footer=doc.querySelector('.studio-footer')??doc.querySelector('footer');
+ if(!footer&&!doc.getElementById('fleetlab-root')){footer=el('footer');doc.body.appendChild(footer);}
+ if(footer){
+  footer.classList.add('design-shell-footer');
+  for(const p of footer.querySelectorAll('p'))if(!p.classList.contains('design-honesty')&&/Not affiliated with or endorsed by/.test(p.textContent)){
+   for(const text of p.childNodes)if(text.nodeType===3)text.textContent=text.textContent.replace(/Not affiliated with or endorsed by[^.]*\.\s*/g,'');
+  }
+  if(!footer.querySelector('nav'))footer.appendChild(el('nav',{'aria-label':'Footer navigation'},[['Explore','catalog'],['About & limits','approach'],['Guided walkthrough','walkthrough']].map(([label,route])=>el('a',{href:'/#/'+route},label))));
+  if(!footer.classList.contains('studio-footer')&&!footer.querySelector('time'))footer.appendChild(el('time',{datetime:'2026-11-06'},'Date: Nov 6th, 2026'));
+ }
+ if(sources&&main){
+  if(!main.id)main.id='source-content';
+  if(!doc.querySelector('.design-source-skip'))doc.body.insertBefore(el('a',{class:'design-source-skip',href:'#'+main.id},'Skip to map sources'),header);
+  const first=[...main.querySelectorAll('a')].find(a=>/\/sf-v1-complete\.tar\.gz$/.test(a.getAttribute('href')??''));
+  if(first&&!doc.getElementById('design-source-start')){
+   const list=first.closest('ul');
+   const start=el('aside',{id:'design-source-start'},[el('strong',{},'Start here: the map behind the recorded study'),el('p',{},[el('a',{href:first.getAttribute('href')},'Download SF v1 →'),' for the Decision notebook and Replay studio. SF v2 and the temporal versions are candidate map work, separate from that recorded experiment.']),el('p',{},[el('a',{href:'./REPRODUCE.md'},'Read the reproduction guide →'),' for the source archives, transformation code and exact local steps.'])]);
+   list?.parentNode.insertBefore(start,list);first.setAttribute('aria-describedby','design-source-start');
+  }
+ }
+}
+
+export function decorateCityOrientation(doc=document){
+ const el=(...a)=>node(doc,...a),limits=doc.getElementById('limits-view'),ledger=doc.getElementById('qualification-ledger');
+ if(ledger&&!doc.getElementById('design-ledger-lead'))ledger.parentNode.insertBefore(el('p',{id:'design-ledger-lead'},'Read this as a checklist of unresolved map questions: are road classes represented, have restrictions been inspected, and do gaps remain across districts? A failed or unfinished check stays open even when the files agree with their recorded hashes.'),ledger);
+ const correction=[...(limits?.querySelectorAll('.panel')??[])].find(p=>p.querySelector('h3')?.textContent.startsWith('Method correction'));
+ if(correction&&!correction.querySelector('details')){
+  const record=correction.querySelector('p');if(record){const details=el('details',{},el('summary',{},'Exact recorded terms and correction'));details.appendChild(record);correction.appendChild(el('p',{},'The lower-energy example could not reach a depot; it did not cross the reserve threshold. Its lower-demand follow-up used one seed, so it does not establish a general result. The nominal battery-capacity label is not used by the engine.'));correction.appendChild(details);}
+ }
 }
 const installed=new WeakSet();
 export function installDesign(doc=document){
@@ -182,7 +235,10 @@ export function atlasCoveragePaths(collection){
  if(!lines.length)throw Error('No eligible coverage roads');
  const scale=Math.min(752/Math.max(1e-9,maxX-minX),552/Math.max(1e-9,maxY-minY)),cx=(minX+maxX)/2,cy=(minY+maxY)/2,paths={included:'',unsupported:''};
  for(const {status,points}of lines)paths[status]+=points.map(([x,y],i)=>(i?'L':'M')+(400+(x-cx)*scale).toFixed(2)+' '+(300-(y-cy)*scale).toFixed(2)).join('');
- return {counts,paths};
+ const gaps=lines.filter(line=>line.status==='unsupported'),pool=gaps.length?gaps:lines;
+ const nearest=pool.map(line=>line.points[Math.floor(line.points.length/2)]).sort((a,b)=>Math.hypot(a[0]-cx,a[1]-cy)-Math.hypot(b[0]-cx,b[1]-cy))[0];
+ const x=400+(nearest[0]-cx)*scale,y=300-(nearest[1]-cy)*scale;
+ return {counts,paths,sample:{viewBox:`${(x-60).toFixed(2)} ${(y-45).toFixed(2)} 120 90`,hasGap:!!gaps.length}};
 }
 export async function verifyAtlasBytes(bytes,expected){
  if(!expected||!Number.isSafeInteger(expected.bytes)||!/^[a-f0-9]{64}$/.test(expected.sha256))throw Error('File absent from snapshot catalogue');
@@ -198,11 +254,17 @@ export function decorateAtlasCoverage(doc=document){
  const el=(...args)=>node(doc,...args),svg=(tag,attrs)=>node(doc,tag,attrs,[],'http://www.w3.org/2000/svg');
  bar.appendChild(el('p',{class:'atlas-scope-badge'},'Atlas view only — notebook and replay results always use frozen SF v1'));
  const versionContext=el('p',{class:'atlas-version-context'},'SF v2 is an earlier static candidate; SF v3 adds time-aware rules. Source checks are loading.');bar.appendChild(versionContext);
- const button=el('button',{type:'button',class:'secondary','aria-pressed':'false','aria-controls':'atlas-coverage-detail'},'Highlight unsupported gaps');
- const status=el('p',{role:'status',class:'atlas-coverage-status'}),drawing=svg('svg',{viewBox:'0 0 800 600',role:'img','aria-label':'Recorded road support coverage, fixed full-network view'});
- const detail=el('section',{id:'atlas-coverage-detail',class:'atlas-coverage-detail',hidden:''},[status,drawing,el('p',{},'Fixed full-network view of eligible source roads. Thick dashed ochre: unsupported; thin teal: supported. Excluded road classes are omitted. This is map coverage, not fleet simulation output or navigation.')]);
- stage.parentNode.insertBefore(button,stage);stage.parentNode.insertBefore(detail,stage);
- let wanted=false,ticket=0,catalogPromise=null;const cache=new Map(),base=new URL('./',doc.baseURI),fetcher=doc.defaultView?.fetch?.bind(doc.defaultView)??fetch;
+ const button=el('button',{type:'button',class:'secondary','aria-pressed':'true','aria-controls':'atlas-coverage-detail'},'Open interactive atlas');
+ const status=el('p',{role:'status',class:'atlas-coverage-status'}),drawing=svg('svg',{viewBox:'0 0 800 600',role:'img','aria-label':'Recorded road support coverage, close sample','data-layer':'both'});
+ let extent='sample',sample=null;
+ const views=el('div',{class:'atlas-coverage-controls',role:'group','aria-label':'Coverage extent'}),layers=el('div',{class:'atlas-coverage-controls',role:'group','aria-label':'Supported and unsupported roads'});
+ const setExtent=()=>{drawing.setAttribute('viewBox',extent==='sample'&&sample?sample.viewBox:'0 0 800 600');drawing.setAttribute('aria-label',`Recorded road support coverage, ${extent==='sample'?'close sample':'full network'}`);for(const b of views.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.getAttribute('data-coverage-view')===extent));};
+ for(const [value,label]of [['sample','Close sample'],['full','Full network']]){const b=el('button',{type:'button','data-coverage-view':value,'aria-pressed':String(value===extent)},label);b.addEventListener('click',()=>{extent=value;setExtent();});views.appendChild(b);}
+ for(const [value,label]of [['both','Both road classes'],['supported','Supported only'],['unsupported','Unsupported only']]){const b=el('button',{type:'button','data-coverage-layer':value,'aria-pressed':String(value==='both')},label);b.addEventListener('click',()=>{drawing.setAttribute('data-layer',value);for(const n of layers.querySelectorAll('button'))n.setAttribute('aria-pressed',String(n===b));});layers.appendChild(b);}
+ const note=el('p',{class:'atlas-coverage-sample-note'});
+ const detail=el('section',{id:'atlas-coverage-detail',class:'atlas-coverage-detail'},[views,layers,status,note,drawing,el('p',{},'Dashed ochre: unsupported; solid teal: supported. Excluded road classes are omitted. Counts describe the full eligible source network, not just this crop. This is map coverage, not fleet simulation output or navigation.')]);
+ stage.parentNode.insertBefore(button,stage);stage.parentNode.insertBefore(detail,stage);stage.hidden=true;
+ let wanted=true,ticket=0,catalogPromise=null;const cache=new Map(),base=new URL('./',doc.baseURI),fetcher=doc.defaultView?.fetch?.bind(doc.defaultView)??fetch;
  const catalog=()=>catalogPromise??=(async()=>{const r=await fetcher(new URL('data/catalog.json',base),{cache:'no-cache'});if(!r.ok)throw Error('Snapshot catalogue unavailable');return r.json();})().catch(e=>{catalogPromise=null;throw e;});
  const read=async path=>{const c=await catalog(),r=await fetcher(new URL(path,base),{cache:'no-cache'});if(!r.ok)throw Error('Recorded coverage unavailable');return verifyAtlasBytes(await r.arrayBuffer(),c.files?.[path]);};
  const selected=()=>doc.getElementById('temporal-map')?.getAttribute('aria-pressed')==='true'?'temporal':doc.getElementById('candidate-map')?.getAttribute('aria-pressed')==='true'?'candidate':'recorded';
@@ -213,12 +275,16 @@ export function decorateAtlasCoverage(doc=document){
    const supported=svg('path',{d:result.paths.included,class:'atlas-coverage-supported',fill:'none'}),unsupported=svg('path',{d:result.paths.unsupported,class:'atlas-coverage-unsupported',fill:'none'});
    const swatch=atlas.querySelector('.legend-line.amber'),warm=swatch&&doc.defaultView?.getComputedStyle?.(swatch).backgroundColor;
    if(warm)unsupported.style.color=warm;
-   drawing.replaceChildren(supported,unsupported);status.textContent=`${label}: ${result.counts.unsupported.toLocaleString('en-US')} unsupported / ${(result.counts.included+result.counts.unsupported).toLocaleString('en-US')} eligible source records. ${result.counts.excluded.toLocaleString('en-US')} excluded records omitted.`;
+   sample=result.sample;setExtent();note.textContent=sample.hasGap?'Close sample: an unsupported source segment near the network centre. Use Full network for context.':'No unsupported source records in this version. Close sample shows supported roads.';drawing.replaceChildren(supported,unsupported);status.textContent=`${label}: ${result.counts.unsupported.toLocaleString('en-US')} unsupported / ${(result.counts.included+result.counts.unsupported).toLocaleString('en-US')} eligible source records. ${result.counts.excluded.toLocaleString('en-US')} excluded records omitted.`;
   }catch(e){if(id===ticket&&wanted)status.textContent=`Coverage view unavailable: ${e.message}. Use the original map; no substituted road data.`;}
  }
- button.addEventListener('click',()=>{wanted=!wanted;button.setAttribute('aria-pressed',String(wanted));button.textContent=wanted?'Return to interactive atlas':'Highlight unsupported gaps';detail.hidden=!wanted;stage.hidden=wanted;update();});
+ const showCoverage=value=>{wanted=value;button.setAttribute('aria-pressed',String(wanted));button.textContent=wanted?'Open interactive atlas':'Inspect supported roads and gaps';detail.hidden=!wanted;stage.hidden=wanted;update();};
+ button.addEventListener('click',()=>showCoverage(!wanted));
+ for(const control of doc.querySelectorAll('#flat-toggle,#inspect-gap,[data-mask]'))control.addEventListener('click',()=>showCoverage(false),true);
+ doc.getElementById('atlas-arm')?.addEventListener('change',()=>showCoverage(false),true);
  const Observer=doc.defaultView?.MutationObserver??globalThis.MutationObserver;
  if(Observer)new Observer(rows=>{if(rows.some(r=>r.type==='attributes'))update();}).observe(bar,{subtree:true,attributes:true,attributeFilter:['aria-pressed']});
+ update();
  // Use the same checksum-bound temporal summary as the native viewer; never hardcode candidate outcomes.
  read('data/temporal-summary.json').then(data=>{const r=data.report??data;
   if(Number.isFinite(r.timed_turn_count)&&Number.isFinite(r.timed_access_count)&&Number.isFinite(r.before?.unsupported_fraction)&&Number.isFinite(r.after?.unsupported_fraction))versionContext.textContent=`SF v2 → SF v3: ${r.timed_turn_count} timed turn rules, ${r.timed_access_count} way-access schedules; unsupported eligible length ${(100*r.before.unsupported_fraction).toFixed(2)}% → ${(100*r.after.unsupported_fraction).toFixed(2)}%. These candidates have no notebook or replay results.`;
