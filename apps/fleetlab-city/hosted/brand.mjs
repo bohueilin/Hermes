@@ -50,12 +50,14 @@ if(hero&&!doc.getElementById('design-network-lesson')){
   el('figure',{},[el('img',{src:media+'shared-delivery.webp',alt:'Two concept vehicles connected to one shared data source.',width:'2048',height:'1152',loading:'lazy',decoding:'async'}),el('figcaption',{},'Illustration only. Use the checked model below to compare outcomes and individual delays.')]),
  ]);hero.appendChild(art);
 }
+decorateFleetCycle(doc);
 decorateVisitors(doc);
 const motion=doc.querySelector('.visitor-motion-control'),shell=doc.querySelector('header.design-shell');
 if(motion&&shell&&motion.parentNode!==shell)shell.appendChild(motion);
 decorateCityOrientation(doc);
 decorateDepotPipes(doc);
 decorateAtlasCoverage(doc);
+installConceptMotion(doc);
 }
 
 // One global shell; City section controls stay local to the City content.
@@ -111,7 +113,7 @@ export function decorateCityOrientation(doc=document){
 const installed=new WeakSet();
 export function installDesign(doc=document){
 if(installed.has(doc))return;installed.add(doc);decorateDesign(doc);
-const selector='.studio-monogram,.delivery-brand,a.brand,.studio-overview,.approach-intro,.depot-flow-lab,.capacity-map';
+const selector='.studio-monogram,.delivery-brand,a.brand,.studio-overview,.approach-intro,.depot-flow-lab,.capacity-map,[data-concept="fleet"]';
 new MutationObserver(rows=>{if(rows.some(r=>{const n=r.target;return n?.closest?.('#setup,#outcome,#preset');}))decorateDepotPipes(doc);if(rows.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches(selector)||n.querySelector(selector)))))decorateDesign(doc);}).observe(doc.body,{childList:true,subtree:true});
 }
 
@@ -141,12 +143,13 @@ export function DepotPipe(doc,config=PIPE_DEFAULT){
  const mode=el('select',{'aria-label':'Illustrative cache state'},[['cold','Cold / direct WAN'],['warm','Warm / local cache']].map(([value,text])=>el('option',{value},text)));mode.value=c.cache==='warm'?'warm':'cold';
  const downloads=el('input',{type:'number',min:'1',max:'24',value:'2','aria-label':'Illustrative download vehicles'});downloads.value='2';
  const uploads=el('input',{type:'number',min:'0',max:'24',value:'1','aria-label':'Illustrative upload vehicles'});uploads.value='1';
- const topology=el('div',{class:'depot-pipe-topology','aria-label':'Directional depot topology'}),usage=el('div',{class:'depot-pipe-usage'}),cacheNote=el('p',{class:'depot-pipe-cache-note'}),rates=el('p',{'data-pipe-rates':'',role:'status'}),caps=el('p',{class:'depot-pipe-caps'});
+ const topology=el('div',{class:'depot-pipe-topology','aria-label':'Directional depot topology','data-concept-motion':'pipe','data-concept-motion-state':'paused'}),pressure=el('p',{class:'depot-pipe-pressure','data-pipe-pressure':''}),usage=el('div',{class:'depot-pipe-usage'}),cacheNote=el('p',{class:'depot-pipe-cache-note'}),rates=el('p',{'data-pipe-rates':'',role:'status'}),caps=el('p',{class:'depot-pipe-caps'});
  const root=el('section',{class:'depot-pipe','aria-label':'Shared depot data paths'},[
   el('p',{class:'design-eyebrow'},'FOLLOW THE SHARED PIPE'),el('h2',{},'One radio. Two WAN directions. A local cache.'),caps,topology,
-  el('div',{class:'depot-pipe-controls'},[el('label',{},['Cache experiment',mode]),el('label',{},['Download vehicles',downloads]),el('label',{},['Upload vehicles',uploads])]),rates,usage,cacheNote,
+  el('div',{class:'depot-pipe-controls'},[el('label',{},['Cache experiment',mode]),el('label',{},['Download vehicles',downloads]),el('label',{},['Upload vehicles',uploads])]),rates,pressure,usage,cacheNote,
   el('p',{},'Separate illustrative steady-state calculator: each active vehicle gets an equal radio reservation; its own client and directional WAN or local-read cap may reduce it further. Unused reservations are not redistributed. No completion time, price or simulation outcome is predicted.'),
   el('p',{},'Cold cache fills consume WAN down first. A warm cache avoids repeated WAN downloads, but still uses radio and local reads. Sensor uploads always use WAN up. Telemetry is an illustrative upload class, not an additional modeled Readiness task.'),
+  el('p',{class:'depot-pipe-motion-note'},'Moving markers show direction, not speed or packet counts. Software and maps are download classes sharing the download total; cold fill is a static prerequisite, with no modeled workload.'),
   el('p',{class:'depot-pipe-caption'},'Concept illustration · not simulation output')]);
  const paint=()=>{
   const d=Math.max(1,Math.min(24,Number(downloads.value)||1)),u=Math.max(0,Math.min(24,Number(uploads.value)||0));downloads.value=String(d);uploads.value=String(u);
@@ -161,6 +164,14 @@ export function DepotPipe(doc,config=PIPE_DEFAULT){
   if(!topology.firstChild)topology.replaceChildren(...lanes.map(([id,name,path])=>el('div',{class:'depot-pipe-route','data-path':id},[el('strong',{class:'depot-pipe-route-label'},name),el('div',{class:'depot-pipe-track'},path.flatMap(([key,label],i)=>[...(i?[el('span',{class:'depot-pipe-connector','aria-hidden':'true'},'→')]:[]),el('span',{class:'depot-pipe-node','data-resource':key},label)]))])));
   const usedDownload=d*r.download,usedUpload=u*r.upload,radioUsed=usedDownload+usedUpload;
   const resources=[['Radio',radioUsed,c.radio],['WAN down',r.hit?0:usedDownload,c.down],['WAN up',usedUpload,c.up],['Local reads',r.hit?usedDownload:0,c.read]];
+  for(const route of topology.querySelectorAll('[data-path]')){
+   const id=route.getAttribute('data-path'),active=id==='upload'?usedUpload>0:id==='warm-delivery'?r.hit&&usedDownload>0:['software','maps'].includes(id)?!r.hit&&usedDownload>0:false;
+   const value=String(active);if(route.getAttribute('data-pipe-active')!==value)route.setAttribute('data-pipe-active',value);
+  }
+  const saturated=usedUpload>0&&usedUpload>=c.up-1e-6;
+  const pressureText=`WAN up ${saturated?'at capacity':usedUpload?'in use':'idle'}: ${usedUpload.toFixed(1)} / ${c.up} Mbps. ${r.hit?'Warm cache bypasses WAN down only; sensor uploads still use WAN up.':'Try warm cache to bypass repeated WAN downloads; sensor uploads still use WAN up.'}`;
+  if(pressure.textContent!==pressureText)pressure.textContent=pressureText;
+  const pressureState=saturated?'full':usedUpload?'active':'idle';if(pressure.getAttribute('data-pressure')!==pressureState)pressure.setAttribute('data-pressure',pressureState);
   const usageSig=JSON.stringify(resources);
   if(usage.getAttribute('data-usage')!==usageSig){usage.setAttribute('data-usage',usageSig);usage.replaceChildren(...resources.map(([label,used,total])=>el('div',{class:'depot-pipe-resource'},[el('span',{},`${label}: ${used.toFixed(1)} / ${total} Mbps`),el('div',{class:'depot-pipe-meter',role:'meter','aria-label':label,'aria-valuemin':'0','aria-valuemax':String(total),'aria-valuenow':String(used)},el('span',{style:`width:${total?Math.min(100,100*used/total):0}%`}))])),el('p',{},`Unused radio: ${Math.max(0,c.radio-radioUsed).toFixed(1)} Mbps. Bars show only the illustrative delivery/upload rates, not cache-fill work. Cache fill is WAN-down-only; no fill workload or duration is assumed.`));}
   const text=`${r.hit?'Warm cache delivery':'WAN download delivery'}: ${r.download.toFixed(1)} Mbps per download vehicle · Upload: ${r.upload.toFixed(1)} Mbps per upload vehicle. ${d+u} vehicles share the radio.`;
@@ -290,6 +301,70 @@ export function decorateAtlasCoverage(doc=document){
   if(Number.isFinite(r.timed_turn_count)&&Number.isFinite(r.timed_access_count)&&Number.isFinite(r.before?.unsupported_fraction)&&Number.isFinite(r.after?.unsupported_fraction))versionContext.textContent=`SF v2 → SF v3: ${r.timed_turn_count} timed turn rules, ${r.timed_access_count} way-access schedules; unsupported eligible length ${(100*r.before.unsupported_fraction).toFixed(2)}% → ${(100*r.after.unsupported_fraction).toFixed(2)}%. These candidates have no notebook or replay results.`;
   else versionContext.textContent='SF v2 is an earlier static candidate; SF v3 adds time-aware rules. Inspect source checks below; notebook and replay stay on SF v1.';
  }).catch(()=>{versionContext.textContent='SF v2 is an earlier static candidate; SF v3 adds time-aware rules. Candidate summary unavailable; notebook and replay stay on SF v1.';});
+}
+
+// Hosted concept drawings: no simulation records, model clocks or playback are read.
+export function decorateFleetCycle(doc=document){
+ const el=(...a)=>node(doc,...a),svg=(tag,attrs,children=[])=>node(doc,tag,attrs,children,'http://www.w3.org/2000/svg');
+ for(const figure of doc.querySelectorAll('[data-concept="fleet"] figure')){
+  if(figure.classList.contains('concept-cycle'))continue;figure.classList.add('concept-cycle');
+  const pod=delay=>svg('g',{class:'concept-cycle-pod',style:`animation-delay:${delay}s`},[
+   svg('rect',{x:'-20',y:'-12',width:'40',height:'24',rx:'10',class:'concept-cycle-body'}),
+   svg('rect',{x:'-10',y:'-8',width:'20',height:'16',rx:'5',class:'concept-cycle-window'}),
+   ...[-14,10].flatMap(x=>[-15,12].map(y=>svg('rect',{x:String(x),y:String(y),width:'5',height:'3',rx:'1',class:'concept-cycle-wheel'}))),
+  ]);
+  const steps=[['Pickup','Reach the rider empty.'],['Passenger trip','Carry the rider to a destination.'],['Depot','Return empty when energy or service is needed.'],['Redispatch','Finish required work; return to service.']];
+  const drawing=svg('svg',{viewBox:'0 0 640 300',class:'concept-cycle-drawing','aria-hidden':'true',focusable:'false','data-concept-motion':'fleet','data-concept-motion-state':'paused'},[
+   svg('path',{d:'M130 65H510V235H130Z',class:'concept-cycle-road'}),
+   svg('path',{d:'M312 57l10 8-10 8M502 143l8 10 8-10M328 227l-10 8 10 8M122 157l8-10 8 10',class:'concept-cycle-arrows'}),
+   ...[[130,65],[510,65],[510,235],[130,235]].map(([x,y],i)=>svg('g',{},[
+    svg('circle',{cx:String(x),cy:String(y),r:'28',class:'concept-cycle-stop'}),
+    svg('text',{x:String(x),y:String(y<100?y-38:y+46),'text-anchor':'middle',class:'concept-cycle-number'},String(i+1)),
+   ])),pod(0),pod(-8),
+  ]);
+  figure.replaceChildren(drawing,
+   el('ol',{class:'concept-cycle-steps'},steps.map(([title,detail])=>el('li',{},[el('strong',{},title),el('span',{},detail)]))),
+   el('aside',{class:'concept-cycle-conditions'},[el('strong',{},'Conditional holds · outside the nominal loop'),el('p',{},'Queue if a required bay is occupied. Hold if charging or service is incomplete. These are possible constraints, not mandatory stages of every trip.')]),
+   el('p',{class:'concept-cycle-note'},'White pods trace a conceptual cycle. Motion shows order only, with no simulated timing, utilization or real-world route.'),
+   el('figcaption',{},'Concept illustration · not simulation output'));
+ }
+}
+
+// One observer set per document consumes the existing global control. CSS provides
+// an immediate global veto; this lifecycle adds visibility and route ownership.
+const conceptMotionControllers=new WeakMap();
+export function installConceptMotion(doc=document){
+ const existing=conceptMotionControllers.get(doc);if(existing){existing();return;}
+ const win=doc.defaultView,root=doc.documentElement;
+ if(!win||typeof win.MutationObserver!=='function')return;
+ const media=win.matchMedia?.('(prefers-reduced-motion: reduce)'),active=new Map();let stopped=false,suspended=false;
+ const setState=(target,running)=>{const next=running?'running':'paused';if(target.getAttribute('data-concept-motion-state')!==next)target.setAttribute('data-concept-motion-state',next);};
+ const sync=()=>{
+  const enabled=!stopped&&!suspended&&!doc.hidden&&!media?.matches&&root.getAttribute('data-motion')!=='reduce'&&root.getAttribute('data-visitor-motion')==='running'&&!root.hasAttribute('data-visitor-user-paused');
+  for(const [target,visible]of active)setState(target,enabled&&visible&&target.isConnected&&!target.closest('[hidden],[inert],details:not([open])')&&!target.parentElement?.closest('[aria-hidden="true"]'));
+ };
+ const visibility=typeof win.IntersectionObserver==='function'?new win.IntersectionObserver(entries=>{
+  for(const entry of entries)if(active.has(entry.target))active.set(entry.target,entry.isIntersecting&&entry.intersectionRatio>0);sync();
+ }):null;
+ const scan=()=>{
+  if(stopped)return;
+  for(const target of active.keys())if(!target.isConnected){setState(target,false);visibility?.unobserve(target);active.delete(target);}
+  for(const target of doc.querySelectorAll('[data-concept-motion]'))if(!active.has(target)){active.set(target,false);setState(target,false);visibility?.observe(target);}
+  sync();
+ };
+ const globals=new win.MutationObserver(sync),routes=new win.MutationObserver(rows=>{
+  // Replay frames may update unrelated text frequently; rescan only new/removed
+  // concept subtrees, while hidden-route changes need only the small active set.
+  if([...active.keys()].some(target=>!target.isConnected)||rows.some(row=>[...(row.addedNodes??[]),...(row.removedNodes??[])].some(n=>n.nodeType===1&&(n.matches('[data-concept-motion]')||n.querySelector('[data-concept-motion]')))))scan();
+  else if(rows.some(row=>row.type==='attributes'))sync();
+ });
+ globals.observe(root,{attributes:true,attributeFilter:['data-visitor-motion','data-visitor-user-paused','data-motion']});
+ routes.observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','inert','aria-hidden','open']});
+ const hide=event=>{suspended=true;sync();if(event.persisted)return;
+  stopped=true;visibility?.disconnect();globals.disconnect();routes.disconnect();active.clear();media?.removeEventListener('change',sync);doc.removeEventListener('visibilitychange',sync);win.removeEventListener('pagehide',hide);win.removeEventListener('pageshow',show);conceptMotionControllers.delete(doc);
+ };
+ const show=()=>{suspended=false;scan();};
+ media?.addEventListener('change',sync);doc.addEventListener('visibilitychange',sync);win.addEventListener('pagehide',hide);win.addEventListener('pageshow',show);conceptMotionControllers.set(doc,scan);scan();
 }
 
 if(typeof document!=='undefined'){
