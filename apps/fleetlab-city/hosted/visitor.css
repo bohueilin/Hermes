@@ -100,7 +100,7 @@ html[data-visitor-motion=paused] summary::before{transition:none!important}
 @media(prefers-reduced-motion:reduce){summary::before{transition:none!important}:is(button,.studio-button,.design-primary,.catalog-card,.visitor-start-card,.visitor-city-card,.visitor-family,.motion-feedback){transition:none!important;transform:none!important}.catalog-grid>.catalog-card,details[open]>:not(summary),.motion-enter,.motion-staged,.motion-ambient{animation:none!important}}
 @media(forced-colors:active){:is(.operations-lab,.fixture-control,.bench) :is(select,input){appearance:auto;background-image:none;forced-color-adjust:auto}}
 
-.visitor-tour{margin:24px 0}.visitor-tour h2{font:600 24px/1.2 var(--font-display);margin:0 0 12px}.visitor-tour ol{display:flex;flex-wrap:wrap;gap:12px 28px;padding-left:20px}.visitor-tour a{color:#204f3f;text-underline-offset:4px}.visitor-purpose .visitor-byline{font-size:19px!important;margin-bottom:17px!important;color:#254c3e}
+.visitor-tour{margin:24px 0}.visitor-tour h2{font:600 24px/1.2 var(--font-display);margin:0 0 12px}.visitor-tour ol{display:flex;flex-wrap:wrap;gap:12px 28px;padding-left:20px}.visitor-tour a,.ops-status a,.map-gloss{color:#204f3f;text-underline-offset:4px}.ops-result-summary>h2:focus-visible{width:fit-content;outline:2px solid #143c2b;outline-offset:4px}.visitor-purpose .visitor-byline{font-size:19px!important;margin-bottom:17px!important;color:#254c3e}
 
 @media(max-width:360px){.visitor-purpose h1{font-size:34px!important;margin-bottom:16px!important}.visitor-purpose .visitor-byline{font-size:16px!important;line-height:1.5!important;margin-bottom:12px!important}.visitor-lede{font-size:16px!important;line-height:1.5!important}.visitor-first-action{margin-top:8px}.visitor-tour{margin:18px 0}}
 
@@ -114,4 +114,4 @@ html[data-visitor-motion=paused] summary::before{transition:none!important}
 /* Keep the hook beside its existing art; the setup gets the full reading width. */
 .flow-hero>.flow-setup-card{grid-column:1/-1;min-width:0}.flow-hero>.visitor-diagram{grid-column:2;grid-row:4;margin:0;width:100%;max-width:none}.flow-hero .flow-setup-table{table-layout:auto;width:100%}.flow-hero .flow-setup-table th,.flow-hero .flow-setup-table td{overflow-wrap:normal}.flow-hero .flow-setup-table caption{text-align:left}@media(max-width:999px){.flow-hero>.visitor-diagram{margin:20px 0;max-width:540px}.flow-hero>.flow-setup-card{margin-top:20px}}
 
-@media(min-width:768px){#visitor-insights .start-grid{grid-template-columns:repeat(6,minmax(0,1fr))}#visitor-insights .start-card{grid-column:span 2}#visitor-insights .start-card:nth-last-child(-n+2){grid-column:span 3}}
+@media(min-width:768px){.bay-map-legend{flex-wrap:wrap}#visitor-insights .start-grid{grid-template-columns:repeat(6,minmax(0,1fr))}#visitor-insights .start-card{grid-column:span 2}#visitor-insights .start-card:nth-last-child(-n+2){grid-column:span 3}}
