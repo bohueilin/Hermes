@@ -1,8 +1,8 @@
 {
   "schema": "fleetlab.approved-city-inputs/1.0.0",
   "base_release": {
-    "sha256": "c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f",
-    "provenance": "docs/FLEETLAB_NETWORK_FLOWS_HANDOFF_2026-10-09.md"
+    "sha256": "8610d83314372a4ce311c807f6ea9aca1904f2b61bb7304dd8456654a50d8c01",
+    "provenance": "docs/FLEETLAB_CITY_BASE_REFRESH_2026-11-08.md"
   },
   "source_offer_manifest": {
     "sha256": "71872c6f571c644dbc2fbfee4bb308e3ed2f7406c7a54ecb3f70ab0e2e4fc817",

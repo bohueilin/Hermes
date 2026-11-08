@@ -15,7 +15,7 @@ const SPEC_BOUNDS={nf03_closure_bytes:593859,nf04_closure_bytes:275243,delivery_
  package_metadata_bytes:45385,non_city_bytes:16447424};
 const SPEC_BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
  depot_route_local_bytes:418159,emitted_text_bytes:3569285,integration_text_bytes:129056,hosted_artwork_bytes:7793265,source_offer_extracted_bytes:4079740,non_city_minus_offer_bytes:15039757};
-const DIGEST_PREFIXES={legacy:'15b3d561',city_base:'4fa335d2',city_source_offer:'1bf42853',readback:'708659b4'};
+const DIGEST_PREFIXES={legacy:'15b3d561',city_base:'feeb7cc7',city_source_offer:'1bf42853',readback:'708659b4'};
 const OFFLINE_SHA='313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1';
 // Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
 const OFFLINE_AFTER_PAIR={bytes:2585068,sha256:'d8b5e5f146b9cbe3906995a9ca52d645fcc507c2ee858e1e676bec212b5bf855'};
@@ -24,7 +24,7 @@ const LEGACY='15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529';
 // A synthetic stage holding the BEFORE values, shaped like the three records build-release.py writes.
 function stage(changes={},offline={bytes:2565111,sha256:OFFLINE_SHA}){
  const s={inputs:{source_commit:'0'.repeat(40),runtime:{node:'v22.23.4',python:'3.11.15'},legacy_readback_sha256:'708659b40227369973cca941c69c098cb059c1dd2cc375d0d0203d56cd903d99',
-  inputs:{legacy:{file_count:99,inventory_sha256:LEGACY},city_base:{file_count:2,inventory_sha256:'4fa335d226090aae63350a50f3af481d91df3f16d920ecacb22828d0b16c2550'},
+  inputs:{legacy:{file_count:99,inventory_sha256:LEGACY},city_base:{file_count:2,inventory_sha256:'feeb7cc74eaf9f159b32b0522017708fe936f24c3a001465ea7b51c8d7f60def'},
    city_source_offer:{file_count:3,inventory_sha256:'1bf428531ba2d645054abae69b400e061d0bc742f912959a9e57f4d48e44e734'}}},
   manifest:{non_city_bytes:16187445,offline_download:{bytes:offline.bytes,path:'downloads/fleetlab-offline.html',sha256:offline.sha256},
    integrated_text:{nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
