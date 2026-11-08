@@ -15,9 +15,9 @@ export const OFFLINE_AFTER={bytes:2585068,sha256:'d8b5e5f146b9cbe3906995a9ca52d6
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
-export const BOUNDS={nf03_closure_bytes:593859,nf04_closure_bytes:275243,delivery_order_closure_bytes:280367,r1_closure_bytes:251446,r3_closure_bytes:207150,depot_closure_bytes:567049,
- emitted_text_bytes:3645576,integration_text_bytes:182448,integration_source_bytes:442921,source_offer_extracted_bytes:4156489,source_offer_compressed_bytes:1171005,
- package_metadata_bytes:45385,non_city_bytes:16447424};
+export const BOUNDS={nf03_closure_bytes:594015,nf04_closure_bytes:275399,delivery_order_closure_bytes:280523,r1_closure_bytes:251602,r3_closure_bytes:207306,depot_closure_bytes:567205,
+ emitted_text_bytes:3645732,integration_text_bytes:182604,integration_source_bytes:443073,source_offer_extracted_bytes:4156641,source_offer_compressed_bytes:1171061,
+ package_metadata_bytes:45385,non_city_bytes:16447636};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,

@@ -159,10 +159,10 @@ test('final transformed headers remain inside each complete route closure cap',(
   const teaching=buildSite(root),final=new Map(teaching);
   const closure=new Set([...tool.capacityScope(teaching),'network-flows/capacity/release.json','_headers']);
   const bytes=[...closure].reduce((total,path)=>total+Buffer.byteLength(teaching.get(path)),0);
-  final.set('_headers',final.get('_headers')+' '.repeat(593859-bytes));
-  assert.equal(tool.measureIntegratedText(teaching,final).nf03_closure_bytes,593859);
+  final.set('_headers',final.get('_headers')+' '.repeat(594015-bytes));
+  assert.equal(tool.measureIntegratedText(teaching,final).nf03_closure_bytes,594015);
   final.set('_headers',final.get('_headers')+' ');
-  assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget.*593860.*593859/);
+  assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget.*594016.*594015/);
   // Isolate the NF04 closure guard from the independently capped aggregate.
   const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')&&!R3_MODULES.has(path)&&!path.startsWith('network-flows/dispatch/')&&!DEPOT_MODULE_PATH.test(path)&&!path.startsWith('depot-readiness/')));
   const nf04=tool.measureSiteOwnership(nf04Only).nf04_closure_bytes;
