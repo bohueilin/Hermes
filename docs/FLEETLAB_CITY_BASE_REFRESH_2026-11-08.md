@@ -4,7 +4,7 @@ Provenance record for the `base_release` pin in `apps/fleetlab-city/deploy/appro
 
 ## Why
 
-The release recipe builds the hosted City explorer from a pinned City base generation. It never rebuilds the viewer from `apps/fleetlab-city/web/`. The Phase 2 design-audit edits to `web/style.css` and `web/city-map.mjs` therefore never reached the 4b039be release. Those edits are the forest-green depot markers and legend swatch, the green flat-map fallback squares, and the tighter initial atlas camera. Live verification on November 8 found the markers still red. On November 8 the owner chose to derive a new base rather than override the colours in hosted CSS.
+The release recipe builds the hosted City explorer from a pinned City base generation. It never rebuilds the viewer from `apps/fleetlab-city/web/`. The Phase 2 design-audit edits to `web/style.css` and `web/city-map.mjs` therefore never reached the 4b039be release. Those edits are the forest-green depot markers and legend swatch, the green flat-map fallback squares, and the tighter initial atlas camera. Live verification on November 8 found the markers still red. On November 8 the owner chose to derive a new base rather than override the colours in hosted CSS. After design review the same day, the initial atlas camera was changed to frame both fictional depots below the map toolbar, with a wider view below 480 px viewport width.
 
 ## What changed
 
@@ -13,18 +13,18 @@ The script under Reproduce copies the previous base and replaces only `style.css
 | | Release manifest SHA-256 |
 |---|---|
 | Previous base | `c56bda6b509105c5bee778980c01d13028401bc03fc8b49b4948f65c6f18f63f` |
-| Refreshed base | `8610d83314372a4ce311c807f6ea9aca1904f2b61bb7304dd8456654a50d8c01` |
+| Refreshed base | `621e32ee90385fc73a026b42ea2afff1f6e4fb89e09b0b2efb061c9a37ffad7a` |
 
-The build's City base inventory digest, pinned as `INPUT_DIGESTS.city_base` in `apps/fleetlab-city/test/stage-check.mjs`, changes from `4fa335d226090aae63350a50f3af481d91df3f16d920ecacb22828d0b16c2550` to `feeb7cc74eaf9f159b32b0522017708fe936f24c3a001465ea7b51c8d7f60def`.
+The build's City base inventory digest, pinned as `INPUT_DIGESTS.city_base` in `apps/fleetlab-city/test/stage-check.mjs`, changes from `4fa335d226090aae63350a50f3af481d91df3f16d920ecacb22828d0b16c2550` to `1d76e6af7628fe030db02de2817907f63cb4f3ada4ef00d2871b983d44c4ef63`.
 
 | File | Bytes | SHA-256 |
 |---|---:|---|
 | `style.css` | 45,711 | `1e0a25f5fc4e095e26233b094ee1e5134939834bd78a6350896b7187cd3857f7` |
 | `style.css.gz` | 10,470 | `f3feeb9cc3dde826f6fd80295ba85ab37c26e2f24695d4556aa79c3edc14e5dd` |
-| `city-map.mjs` | 11,322 | `268282d437f9c6ff0ab6cfce0db88111f539ebeeebdd3b3618de49d385ea5398` |
-| `city-map.mjs.gz` | 4,063 | `ef9bcdc4ee254ee0960ad4a4b259ab1bf0d19d996c4cc78936a68c07db13673d` |
+| `city-map.mjs` | 11,472 | `d05fd9014d33744ff088a831c7afdd427ff5efb9f9e6a225bb98edfb65cb01b2` |
+| `city-map.mjs.gz` | 4,154 | `2e90d839d1f8e5157fdfee67282bde5064b4217d13093c52488a1a590377c448` |
 
-All other 4,941 files are byte-identical to the previous base, including every `data/` file. The net change is +92 B. No map data, scientific arm, threshold, vehicle profile, source offer or qualification result changed. SF qualification remains HOLD.
+All other 4,941 files are byte-identical to the previous base, including every `data/` file. The net change is +333 B. No map data, scientific arm, threshold, vehicle profile, source offer or qualification result changed. SF qualification remains HOLD.
 
 ## Reproduce
 

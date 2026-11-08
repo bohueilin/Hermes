@@ -5,7 +5,7 @@ import {readFileSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import {isDeepStrictEqual,parseArgs} from 'node:util';
 
-export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529',city_base:'feeb7cc74eaf9f159b32b0522017708fe936f24c3a001465ea7b51c8d7f60def',
+export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529',city_base:'1d76e6af7628fe030db02de2817907f63cb4f3ada4ef00d2871b983d44c4ef63',
  city_source_offer:'1bf428531ba2d645054abae69b400e061d0bc742f912959a9e57f4d48e44e734',readback:'708659b40227369973cca941c69c098cb059c1dd2cc375d0d0203d56cd903d99'};
 // Sidecars record the Node version string and the offer is gzipped by Node's own zlib, so the build runtime is part of every figure.
 export const RUNTIME={node:'v22.23.4',python:'3.11.15'};

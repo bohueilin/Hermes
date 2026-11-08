@@ -4,7 +4,8 @@ const empty = () => ({type:'FeatureCollection',features:[]});
 const make = (tag, cls, text) => { const e=document.createElement(tag);e.className=cls;if(text)e.textContent=text;return e; };
 export class CityMap {
   constructor(host, roads, geometry, {flat=false, replay=false, onInspect=()=>{}}={}) {
-    Object.assign(this,{host,roads,geometry,replay,onInspect,sites:[],markers:[],routes:empty(),mask:'support',flat,center:replay?[-122.436,37.77]:[-122.414,37.777],zoom:replay?11.6:14.5});
+    // The atlas opens framing fictional depots A and B below the map toolbar; phones need a wider view.
+    Object.assign(this,{host,roads,geometry,replay,onInspect,sites:[],markers:[],routes:empty(),mask:'support',flat,center:replay?[-122.436,37.77]:[-122.4306,innerWidth<480?37.7683:37.7584],zoom:replay?11.6:innerWidth<480?11.4:12.2});
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(host);
     if(flat){this.useFlat();return;}
     try {
