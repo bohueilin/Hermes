@@ -88,7 +88,7 @@ export function decorateShell(doc=document){
    for(const text of p.childNodes)if(text.nodeType===3)text.textContent=text.textContent.replace(/Not affiliated with or endorsed by[^.]*\.\s*/g,'');
   }
   if(!footer.querySelector('nav'))footer.appendChild(el('nav',{'aria-label':'Footer navigation'},[['Explore','catalog'],['About & limits','approach'],['Guided walkthrough','walkthrough']].map(([label,route])=>el('a',{href:'/#/'+route},label))));
-  if(!footer.classList.contains('studio-footer')&&!footer.querySelector('time'))footer.appendChild(el('time',{datetime:'2026-11-06'},'Date: Nov 6th, 2026'));
+  if(!footer.classList.contains('studio-footer')&&!footer.querySelector('time'))footer.appendChild(el('time',{datetime:'2026-11-08'},'Date: Nov 8th, 2026'));
  }
  if(sources&&main){
   if(!main.id)main.id='source-content';
