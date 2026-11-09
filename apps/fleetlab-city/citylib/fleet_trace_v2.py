@@ -246,9 +246,8 @@ def _verify_fleet_trace(
                 if event.get("routing_state") != state(v["node"], v["history"]):
                     raise ValueError("arrival recorded history mismatch")
                 v["open"] = None
-            elif kind == "state":
-                if event.get("routing_state") != state(v["node"], v["history"]):
-                    raise ValueError("stop/state transition erased incoming history")
+            elif kind == "state" and event.get("routing_state") != state(v["node"], v["history"]):
+                raise ValueError("stop/state transition erased incoming history")
         if set(vehicles) != set(initial) or used_legs != set(run["legs"]):
             raise ValueError("vehicle/leg inventory mismatch")
         final = {v["id"]: v for v in run["final"]["vehicles"]}
