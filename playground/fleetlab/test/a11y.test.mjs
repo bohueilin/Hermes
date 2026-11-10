@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { UI_CLASS_REGISTRY } from "./helpers/ui-class-registry.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 
@@ -321,7 +322,7 @@ describe("focus, targets, strip and narrow layout", () => {
     }
   });
 
-  test("sentence-length chips wrap at 400 px; only short register and verdict chips keep one line", async () => {
+  test("sentence-length chips wrap at 400 px; bounded map labels and short chips keep one line", async () => {
     const { MODEL_LIMITS } = await import("../src/ui/labels.js");
     // At 12 px monospace (about 7.2 px a character) the longest model-limits chip is wider than a 400 px screen.
     assert.ok(Math.max(...Object.values(MODEL_LIMITS).map((s) => s.length)) * 7.2 > 400 - 32);
@@ -341,7 +342,12 @@ describe("focus, targets, strip and narrow layout", () => {
     // The isometric overlay's plates and texts are short labels positioned over a picture (an id, `H2 · 55 min`,
     // `×19`, `queue 21`, a car's name); a wrap would move a label off the point it names, so they keep one line too.
     // Desktop nav stays on one line; the collapsed menu explicitly restores wrapping.
-    const oneLine = new Set([".bay-city-label",".studio-header nav a",".fl-chip-replay", ".fl-chip-across", ".fl-verdict-chip", ".fl-sr-only", ".fl-iso__plate", ".fl-iso__text", ".fl-iso__numbers", ".fl-iso__count", ".fl-iso__pin"]);
+    const oneLine = new Set([".street-road-label", ".bay-city-label",".studio-header nav a",".fl-chip-replay", ".fl-chip-across", ".fl-verdict-chip", ".fl-sr-only", ".fl-iso__plate", ".fl-iso__text", ".fl-iso__numbers", ".fl-iso__count", ".fl-iso__pin"]);
+    // Road names keep the full DOM text but use the same bounded height as the collision geometry.
+    const road = RULES.filter((rule) => rule.context.length === 0 && rule.selectors?.includes(".street-road-label")).flatMap((rule) => rule.declarations);
+    for (const [name, value] of [["height", "23px"], ["overflow", "hidden"], ["text-overflow", "ellipsis"]]) {
+      assert.ok(road.some((d) => d.name === name && d.value === value), `road labels keep ${name}: ${value}`);
+    }
     for (const rule of RULES.filter((r) => r.declarations.some((d) => d.name === "white-space" && d.value === "nowrap"))) {
       assert.ok(rule.selectors.every((s) => oneLine.has(s)), `white-space: nowrap only on short chips, not ${rule.prelude}`);
     }
@@ -429,15 +435,14 @@ describe("the isometric picture's faces and classes (design 7.3 and 8.2 as amend
     }
   });
 
-  test("every class iso.js sets is defined in styles.css, listed in its header inventory, and carries no motion", () => {
+  test("every class iso.js sets is defined by a CSS selector and carries no motion", () => {
     const source = readFileSync(new URL("../src/ui/iso.js", import.meta.url), "utf8");
     const classes = new Set([...source.matchAll(/fl-iso[\w-]*/g)].map((m) => m[0]));
     assert.ok(classes.size >= 10, [...classes].join(","));
     const selectorText = RULES.flatMap((rule) => rule.selectors ?? []).join(" ");
-    const header = CSS.slice(0, CSS.indexOf("*/"));
     for (const name of classes) {
       assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
-      assert.match(header, new RegExp(`\\.${name}(?![\\w-])`), `the header inventory lists .${name}`);
+      assert.ok(UI_CLASS_REGISTRY.includes(name), `curated UI registry includes .${name}`);
     }
     for (const rule of RULES.filter((r) => r.selectors?.some((sel) => sel.includes(".fl-iso")))) {
       for (const d of rule.declarations) assert.ok(!/^(transition|animation)/.test(d.name) && d.name !== "will-change", `${rule.prelude} ${d.name}`);

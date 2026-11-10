@@ -504,7 +504,7 @@ function experimentCase(state, action) {
 
 /**
  * Reducer cases for the walkthrough layer. Opening it starts at the first beat of the first chapter; leaving it keeps
- * `prepared`, because the runs Prepare made are still in the store and re-entering must not run them again.
+ * `prepared` while the same inputs and results remain; replacing either invalidates it in the public reducer.
  */
 function presentCase(state, action) {
   const present = state.present;
@@ -555,8 +555,8 @@ function selectPreset(state, action) {
   return markResultsStale(next);
 }
 
-/** The pure reducer: every action is one case; an unknown type returns the same state. */
-export function reduce(state, action) {
+/** Apply one action; the public reducer also invalidates replaced walkthrough inputs/results. */
+function reduceAction(state, action) {
   const type = action.type;
   if (type.startsWith("run/")) return runCase(state, action);
   if (type.startsWith("clock/") || type.startsWith("playback/")) return playbackCase(state, action);
@@ -655,6 +655,17 @@ export function reduce(state, action) {
     default:
       return state;
   }
+}
+
+/** Prepared means these exact inputs and results still exist; view-only actions preserve it. */
+export function reduce(state, action) {
+  const next = reduceAction(state, action);
+  if (!state.present.prepared || !next.present.prepared) return next;
+  const changed = next.scenario !== state.scenario || next.experiment.draft !== state.experiment.draft
+    || next.run.id !== state.run.id || next.run.log !== state.run.log
+    || next.experiment.id !== state.experiment.id || next.experiment.frozen !== state.experiment.frozen
+    || next.experiment.verdict !== state.experiment.verdict;
+  return changed ? { ...next, playing: false, present: { ...next.present, prepared: false, stop_s: null } } : next;
 }
 
 /** A store over `initialState`: `getState()`, `dispatch(action)` and `subscribe(fn)` returning an unsubscribe. */

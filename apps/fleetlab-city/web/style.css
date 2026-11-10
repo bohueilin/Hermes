@@ -333,8 +333,8 @@ button,select,summary{min-height:44px}.text-button{display:inline-flex;align-ite
 .map-options label{font-size:13px;flex-shrink:0;display:grid;gap:6px}.map-options p{font-size:13px;line-height:1.5;margin:0;color:var(--muted)}
 .map-options select{font-size:14px}.map-card .maplibregl-ctrl-top-right{top:76px}
 .maplibregl-ctrl-group button{width:42px;height:42px;min-height:42px}.maplibregl-ctrl-scale{font-size:12px;background:#fffdf4e8}
-.depot-marker{background:var(--red);border:2px solid #fff9ed;color:#fff;width:30px;height:30px;border-radius:3px;box-shadow:0 2px 8px #4a252544;font-size:15px;font-weight:700}
-.legend-square{display:inline-block;background:var(--red);width:12px;height:12px;border-radius:1px;vertical-align:middle;margin-right:6px}.legend-line.blue{background:var(--blue)}
+.depot-marker{background:#143c2b;border:2px solid #fff9ed;color:#fff;width:30px;height:30px;border-radius:6px;box-shadow:0 2px 8px #183e3533;font-size:15px;font-weight:700}
+.legend-square{display:inline-block;background:#143c2b;width:12px;height:12px;border-radius:1px;vertical-align:middle;margin-right:6px}.legend-line.blue{background:var(--blue)}
 body[data-view=replay] .intro,body[data-view=compare] .intro{padding-top:35px;padding-bottom:30px}
 body[data-view=replay] h1{font-size:clamp(38px,4vw,56px)}
 .replay-brief{display:grid;grid-template-columns:1.15fr 1fr;gap:40px;background:#eaf0e2;border:1px solid #dce4d4;border-radius:15px;padding:25px 28px}

@@ -16,7 +16,8 @@ import {fingerprint,writeFiles} from './stage-fixture.mjs';
 // Unit text sits 1,859 B under the stage: publication.json (1,800 B) is stage-only and the release receipt is 59 B longer.
 // Uncommitted bound files read 9 B low per sidecar; only depot-owned text, which must stay unchanged, has a floor. nf03 stays enhancement-packaging's gate.
 // Catalog look_for wave (2026-10-31, owner D9): emitted_text_bytes re-based from 3577477-1859 to the measured unit 3575832, no allowance.
-const BOUNDS={nf04_closure_bytes:221334+4096,delivery_order_closure_bytes:225063+4096,r1_closure_bytes:196347+4096,r3_closure_bytes:152391+4096,depot_closure_bytes:513471+2048,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3575832,integration_text_bytes:133152-1800,brand_text_bytes:73889+2048};
+// Wave 2 (2026-11-05, owner W2-D2): exact measured minimum ceilings. Perf waves (2026-11-09 and 11-10, owner): re-measured exactly.
+const BOUNDS={nf04_closure_bytes:276879,delivery_order_closure_bytes:282003,r1_closure_bytes:253367,r3_closure_bytes:208786,depot_closure_bytes:568685,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3647051,integration_text_bytes:182306,brand_text_bytes:129103};
 const within=(key,value)=>{const bound=BOUNDS[key];return Array.isArray(bound)?value>=bound[0]&&value<=bound[1]:value<=bound;};
 const bound=key=>JSON.stringify(BOUNDS[key]??'enhancement-packaging.test.mjs');
 const report=(key,value,claim=`outside ${bound(key)}`)=>`${key} ${value} ${claim} (node ${process.version})`;
@@ -105,10 +106,12 @@ test('the hosted brand text keeps its eight files, matches the Python integrator
  assert.notDeepEqual(python(integrator.replace('"visitor.css",','')),names);
  const {counts}=setup();
  assert.ok(within('brand_text_bytes',counts.brand_text_bytes),report('brand_text_bytes',counts.brand_text_bytes));
- bites('brand_text_bytes','brand.css');
- // software-delivery-package.mjs:109 adds every brand byte to all six closures; depot-owned text excludes it.
- const grown=resized('brand.css',1);
- for(const key of Object.keys(counts)){const step=key==='depot_route_local_bytes'?0:1;assert.equal(grown[key]-counts[key],step,report(key,counts[key],`moved ${grown[key]-counts[key]} B, not ${step} B, for one brand.css byte (bound ${bound(key)})`));}
+ // Wave 3 owner minimum NF03 enforcement rejects the first added brand byte before returning counters.
+ assert.equal(resized('brand.css',BOUNDS.brand_text_bytes-counts.brand_text_bytes).brand_text_bytes,BOUNDS.brand_text_bytes);
+ assert.throws(()=>resized('brand.css',BOUNDS.brand_text_bytes-counts.brand_text_bytes+1),/nf03.*budget/i);
+ // Measure the same one-byte propagation from below the ceiling; depot-owned text excludes shared brand.
+ const smaller=resized('brand.css',-1);
+ for(const key of Object.keys(counts)){const step=key==='depot_route_local_bytes'?0:1;assert.equal(counts[key]-smaller[key],step,report(key,counts[key],`moved ${counts[key]-smaller[key]} B, not ${step} B, for one brand.css byte (bound ${bound(key)})`));}
 });
 
 // Tile swap wave (2026-11-01, owner): tile-media cap re-based from 2097152 to the measured 2130908, no allowance; T-07, T-09, T-13 and T-15 replaced byte for byte.

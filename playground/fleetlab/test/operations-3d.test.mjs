@@ -4,6 +4,17 @@ import {createOperations3D, bayVehiclePosition} from '../src/ui/operations-3d.js
 import {installFakeDom} from './helpers/fake-dom.mjs';
 const places=[{id:'a',label:'City A',x:0,y:0,kind:'city',road_anchor:{x:1,y:0}},{id:'b',label:'Airport B',x:10,y:10,kind:'airport'}];
 const run={locations:places,routes:{ab:{points:[[1,0],[10,0],[10,10]]}}};
+test('corridor framing is tighter than the former distance and the complete legend precedes the map',()=>{
+ const restore=installFakeDom();try{
+  const corridor=[{id:'san-francisco',label:'San Francisco',x:0,y:20},{id:'sfo',label:'SFO',x:5,y:10},{id:'san-mateo',label:'San Mateo',x:10,y:0}];
+  const view=createOperations3D({places:corridor,createRenderer:()=>null});
+  assert.ok(view.getCamera().distance<30);
+  const children=Array.from(view.element.children);
+  assert.ok(children.indexOf(view.element.querySelector('.bay-map-legend'))<children.indexOf(view.element.querySelector('.bay-map-viewport')));
+  assert.ok(view.element.querySelector('[data-legend-state="passenger_trip"]'));
+  view.destroy();
+ }finally{restore();}
+});
 test('Bay movement follows recorded sourced route length and parked cars use road anchors',()=>{
  const car={id:'c',from:'a',to:'b',route_id:'ab',progress:0,node:'a'};
  assert.deepEqual(bayVehiclePosition(run,car,{...car,progress:1},.5),{x:10,y:.5,heading:Math.PI/2});

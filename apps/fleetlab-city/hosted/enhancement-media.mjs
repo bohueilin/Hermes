@@ -8,9 +8,9 @@ export function decorateConceptMedia(doc,createNode){
  const el=(tag,attrs={},children=[])=>createNode(doc,tag,attrs,children);
  const figure=(id,file,alt,caption='',qualification=fence,film=null)=>{
   const [width,height]=file.includes('FL-A2')?[2352,1008]:file.includes('FL-A3')?[2240,1120]:file.includes('FL-V2')?[1280,720]:[2048,1152];
-  const img=el('img',{src:base+file,alt,width:String(width),height:String(height),loading:'lazy',decoding:'async'});
+  const img=el('img',{src:base+file,alt,width:String(width),height:String(height),loading:file.includes('FL-A2')?'eager':'lazy',...(file.includes('FL-A2')?{fetchpriority:'high'}:{}),decoding:'async'});
   const media=el('div',{class:'enhancement-visual'},img);
-  if(film)media.appendChild(el('video',{'data-concept-src':base+film,poster:base+file,preload:'none',muted:'',loop:'',playsinline:'',hidden:'','aria-label':alt}));
+  if(film)media.appendChild(el('video',{'data-concept-src':base+film,preload:'none',muted:'',loop:'',playsinline:'',hidden:'','aria-label':alt}));
   return el('figure',{id,class:'enhancement-media',...(film?{'data-concept-media':'','data-concept-state':'poster'}:{})},[
    media,el('figcaption',{},[el('p',{class:'enhancement-fence'},qualification),...(caption?[el('p',{class:'enhancement-caption'},caption)]:[])]),
   ]);
@@ -35,7 +35,7 @@ export function decorateConceptMedia(doc,createNode){
   layout.appendChild(figure('enhancement-about','FL-A1-people-between-rides.webp',peopleAlt));layout.appendChild(people);
  }
  const title=doc.querySelector('.operations-lab .ops-teaching h1');
- if(title?.textContent==='Fleet day'&&!doc.getElementById('enhancement-fleet-day'))title.parentNode.insertBefore(figure('enhancement-fleet-day','FL-A2-one-fleet-day-panorama.webp','Clay panorama of the same vehicle depot at dawn, midday and night, with white autonomous pods leaving, queueing and charging.','One fleet day: out at dawn, queued by midday, charging by night. Your run will write its own version.'),title.nextSibling);
+ if(title?.textContent==='Fleet day'&&!doc.getElementById('enhancement-fleet-day'))title.closest('.ops-intro').appendChild(figure('enhancement-fleet-day','FL-A2-one-fleet-day-panorama.webp','Clay panorama of the same vehicle depot at dawn, midday and night, with white autonomous pods leaving, queueing and charging.','One fleet day: out at dawn, queued by midday, charging by night. Your run will write its own version.'));
  const notebook=doc.querySelector('#legacy-study > .section-heading');
  if(notebook&&!doc.getElementById('enhancement-notebook'))notebook.parentNode.insertBefore(figure('enhancement-notebook','FL-A3-second-depot-diptych.webp','Clay diptych of the same city twice: with one depot and long looping routes, and with two depots and shorter local routes.','Same city, same streets. Left: one depot, long empty loops. Right: a second depot — the cars stay closer to the riders. The table below is what the model actually found.',"Concept illustration · the study's streets are real; this picture is not the study"),notebook.nextSibling);
  const capacity=doc.querySelector('.capacity-hero');

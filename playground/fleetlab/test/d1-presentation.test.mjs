@@ -12,15 +12,16 @@ import {defaultBayAreaConfig} from '../src/model/bay-operations.js';
 import {createLaunchConfig} from '../src/model/launch-rehearsal.js';
 import {regionalPowerDemoConfig} from '../src/model/regional-power.js';
 import {installFakeDom} from './helpers/fake-dom.mjs';
-function setup(){const restore=installFakeDom(),root=document.createElement('div');document.body.appendChild(root);const store=createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()}));const studio=mountStudio({root,store,playback:{pause(){}},present:{open(){},close(){}}});return {restore,store,studio,close(){studio.destroy();restore();}};}
+function setup(){const restore=installFakeDom(),root=document.createElement('div');document.body.appendChild(root);const store=createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()}));const studio=mountStudio({root,store,playback:{pause(){}},present:{open(){},close(){},prepare(){}}});return {restore,store,studio,close(){studio.destroy();restore();}};}
 const digest=input=>createHash('sha256').update(encodeSetup(createSetup(input))).digest('hex');
-test('Fleet day puts a paused partition before the workspace; Run focuses without scroll and keeps one primary',async()=>{
+test('Fleet day puts a paused partition before the workspace; manual Run reveals its takeaway instantly and keeps one primary',async()=>{
  const x=setup();try{const lab=x.studio.operations;x.studio.navigate('simulation');
   const children=[...lab.element.children],summary=lab.element.querySelector('.ops-result-summary'),workspace=lab.element.querySelector('.ops-workspace');
   assert.ok(summary);assert.ok(children.indexOf(summary)<children.indexOf(workspace));assert.match(children.at(-1).textContent,/Other experiments on this page/);
   assert.equal(lab.element.querySelector('.teaching-glossary').hasAttribute('open'),false);assert.ok(children.indexOf(lab.element.querySelector('.teaching-frame').closest('.ops-intro'))<children.indexOf(summary));
-  let scrolls=0;for(const node of [lab.element,...lab.element.querySelectorAll('*')])node.scrollIntoView=()=>scrolls++;
-  await lab.run();assert.equal(document.activeElement,summary.querySelector('h2'));assert.equal(scrolls,0);assert.equal(lab.getState().playing,false);
+  const scrolls=[];for(const node of [lab.element,...lab.element.querySelectorAll('*')])node.scrollIntoView=options=>scrolls.push({node,options});
+  assert.equal(lab.getState().result,null);assert.equal(scrolls.length,0);
+  await lab.run();assert.equal(document.activeElement,summary.querySelector('h2'));assert.equal(scrolls.length,1);assert.ok(scrolls[0].node===summary.querySelector('.teaching-result').parentNode);assert.deepEqual(scrolls[0].options,{block:'start',behavior:'instant'});assert.equal(lab.getState().playing,false);
   assert.match(summary.textContent,/95 completed · 176 unserved · 4 waiting · 9 in progress = 284 requests/);
   assert.equal(lab.element.querySelectorAll('button.studio-button-primary').filter(b=>!b.disabled).length,1);
   const version=lab.getState().result.version;lab.setConfig({fleet_size:25});assert.match(lab.element.querySelector('.model-identity').textContent,new RegExp(version));assert.match(lab.element.querySelector('.model-identity').textContent,/stale/);
@@ -44,11 +45,11 @@ test('all five setup payloads remain identical and focus their own idle surface 
 });
 test('Launch identity follows its template and four-area routes expose their actual geography',()=>{const x=setup();try{
  const launch=x.studio.operations.launchPanel;assert.ok(launch);launch.chooseTemplate('region_b');assert.match(launch.element.querySelector('.model-identity').textContent,/Fictional compact Region B.*depot-launch-1.0.0/);
- for(const page of ['operations','depots','tour']){x.studio.navigate(page);assert.match(x.studio.element.querySelector('.workspace-intro').textContent,/Schematic four-area Bay Area zones.*not road geometry/);}
+ for(const page of ['operations','depots','tour']){x.studio.navigate(page);assert.equal(x.studio.element.getAttribute('data-page'),page,'requested route must render without an error');assert.match(x.studio.element.querySelector('.workspace-intro').textContent,/Schematic four-area Bay Area zones.*not road geometry/);}
  assert.equal(x.studio.element.querySelector('.studio-boundary'),null);
 }finally{x.close();}});
 test('studio motion overrides drive both replay factories and preserve one preference',async()=>{const x=setup();try{
- const lab=x.studio.operations;x.store.dispatch({type:'motion/system',reduced:true});x.store.dispatch({type:'motion/override',value:false});await lab.run();lab.element.querySelector('.ops-transport button').click();x.restore.dom.frames.flush(0);x.restore.dom.frames.flush(110);assert.equal(lab.getState().minute,.55);
- x.store.dispatch({type:'motion/override',value:true});x.restore.dom.frames.flush(126);assert.equal(lab.getState().minute,0);lab.pause();lab.seek(0);lab.element.querySelector('.ops-transport button').click();x.restore.dom.frames.flush(1000);for(const t of [1250,1500,1750])x.restore.dom.frames.flush(t);assert.equal(lab.getState().minute,0);x.restore.dom.frames.flush(2000);assert.equal(lab.getState().minute,1);lab.pause();
+ const lab=x.studio.operations;x.store.dispatch({type:'motion/system',reduced:true});x.store.dispatch({type:'motion/override',value:false});await lab.run();const startMinute=lab.getState().minute;lab.element.querySelector('.ops-transport button').click();x.restore.dom.frames.flush(0);x.restore.dom.frames.flush(110);assert.equal(lab.getState().minute,startMinute+.55);
+ x.store.dispatch({type:'motion/override',value:true});x.restore.dom.frames.flush(126);assert.equal(lab.getState().minute,startMinute);lab.pause();lab.seek(0);lab.element.querySelector('.ops-transport button').click();x.restore.dom.frames.flush(1000);for(const t of [1250,1500,1750])x.restore.dom.frames.flush(t);assert.equal(lab.getState().minute,0);x.restore.dom.frames.flush(2000);assert.equal(lab.getState().minute,1);lab.pause();
  const street=x.studio.streets;street.setConfig({duration_minutes:10,background_per_hour:0});await street.run();street.element.querySelector('.street-playback button').click();x.restore.dom.frames.flush(0);x.restore.dom.frames.flush(1000);assert.equal(street.getState().time,60);assert.equal(street.getState().time%60,0);
 }finally{x.close();}});

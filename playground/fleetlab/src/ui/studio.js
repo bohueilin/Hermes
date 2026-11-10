@@ -4,7 +4,6 @@ import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-fr
 import {modelHeader,NON_AFFILIATION} from './model-identity.js';
 import {isReducedMotion} from './store.js';
 import {MODEL_VERSION} from '../model/experiment.js';
-import {presetById} from '../model/presets.js';
 // Product entry and navigation across explicit teaching models.
 import { el } from "./dom.js";
 import { createHeroFilm } from "./hero-film.js";
@@ -74,6 +73,7 @@ function approach(navigate) {
     ["Market lead","Locate a supply shortfall and understand the service impact.","Region availability, wait and unserved demand, with time and population in view."],
     ["Depot lead","Find the limiting resource before adding capacity.","Parking, cleaning and service queues; compare capacity and assignment rules."],
     ["Planning partner","Identify what must be true before expanding a depot.","Declared assumptions and a repeatable experiment; energy is simplified in Fleet day; a serial cleaning-worker extension is available; shifts and calibration remain future work."],
+    ["Rider","Get a ride before the wait becomes too long.","Read completed, unserved and still-open requests together. A shorter reported wait can leave more riders behind."],
   ];
   return el("main",{class:"studio-approach",id:"studio-approach"},[
     el("section",{class:"approach-intro"},[eyebrow("ABOUT & LIMITS"),el("h1",{},"What FleetLab models, and what it does not."),el("p",{class:"hero-lede"},"FleetLab is the browser learning playground inside Hermes, an independent simulation and evidence-review project. Every model here is synthetic, inspectable and bounded."),el("p",{},NON_AFFILIATION)]),
@@ -129,9 +129,9 @@ export function mountStudio(app) {
   const container=el('div',{class:'fleet-studio','data-page':'overview'});
   root.parentNode.insertBefore(container,root);
   const navLink=([id,text])=>{const link=pageLink(text,id,navigate);link.setAttribute('data-nav',id);return link;};
-  const navItems=[['overview','Home'],['catalog','Explore'],['approach','About & limits']];
+  const navItems=[['overview','Home'],['simulation','Fleet day'],['streets','Street lab'],['catalog','Explore'],['approach','About & limits']];
   const navLinks=navItems.map(navLink);
-  const labLinkNodes=[['simulation','Fleet day'],['streets','Street lab'],['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['tour','Guided walkthrough']].map(navLink);
+  const labLinkNodes=[['depots','Four-area experiments'],['scale','Scale lab'],['flows','Depot flow lab'],['tour','Guided walkthrough']].map(navLink);
   const labLinks=el('nav',{class:'lab-links','aria-label':'Quick links'},labLinkNodes);
   const brand=pageLink('F','overview',navigate);brand.setAttribute('class','studio-monogram');brand.setAttribute('aria-label','FleetLab home');
   const skip=el('a',{href:'#studio-content',class:'studio-skip',on:{click:event=>{event.preventDefault();activeMain?.focus();}}},'Skip to main content');
@@ -161,7 +161,7 @@ export function mountStudio(app) {
   const errorText=el('p',{});
   const routeError=el('main',{class:'studio-route-error',hidden:true},[eyebrow('LINK COULD NOT BE LOADED'),el('h1',{},'This setup needs attention.'),errorText,el('p',{},'No simulation was run. Check the complete link and the FleetLab version that created it, or choose a view from the navigation.'),el('button',{type:'button',class:'studio-button','data-action':'recover-route',on:{click:()=>navigate('overview')}},'Go to Home')]);
   const footer=el('footer',{class:'studio-footer'},[
-    el('p',{},'An independent educational project by Bo-Huei Lin. Not affiliated with or endorsed by Waymo, Zoox, or their partners.'),
+    el('p',{class:'design-honesty'},NON_AFFILIATION),
     el('div',{},[el('strong',{},'FleetLab / Hermes'),el('p',{},'FleetLab is part of Hermes, an independent simulation and evidence-review project. Built with AI assistance. Synthetic models, inspectable assumptions.')]),
     el('nav',{'aria-label':'Footer navigation'},[pageLink('Explore','catalog',navigate),pageLink('About & limits','approach',navigate),pageLink('Guided walkthrough','tour',navigate)]),
     el('span',{},'Simulation for learning and exploration'),
@@ -219,9 +219,9 @@ export function mountStudio(app) {
       workspaceIntro.replaceChildren(eyebrow('WORKSPACE / DEPOT CAPACITY'),el('h1',{},'Test a depot capacity decision.'),el('p',{},'The first example compares four and six cleaning bays at SF-1. Your current setup and results are kept when you navigate away. Review the assumptions below, then run the paired comparison.'),action('Reset to the 4 vs 6 bay example',()=>{startFromPreset(store.dispatch,'UC-08a');store.dispatch({type:'mode/set',mode:'experiment'});}));
     }
     if(page==='tour'){
-      const s=store.getState(),shown=s.run.log!==null&&s.run.worldAtQueue!==null?s.run.worldAtQueue.presetId:s.presetId;
-      workspaceIntro.replaceChildren(eyebrow('GUIDED WALKTHROUGH / ABOUT 6 MINUTES'),el('h1',{},'One question, one day, one verdict.'),el('p',{},'OPS-01 asks whether 52 San Francisco cars instead of 40 change evening rider wait. Watch the day, read the verdict, then see what it trades and what to test next.'),...(s.present.prepared||shown==='OPS-01'?[]:[el('p',{},`This walkthrough prepares OPS-01 when you press Prepare. Until then the map shows ${presetById(shown)?.title??shown}.`)]));
+      workspaceIntro.replaceChildren(eyebrow('GUIDED WALKTHROUGH / ABOUT 6 MINUTES'),el('h1',{},'One question, one day, one verdict.'),el('p',{},'OPS-01 asks whether 52 San Francisco cars instead of 40 change evening rider wait. The example prepares here in your browser. Then follow the day, read the verdict and see what to test next.'));
       if(!store.getState().present.on)present.open();
+      void present.prepare({focus:false});
     }
     if(workspace){workspaceIntro.appendChild(el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]));updateWorkspaceIdentity(store.getState());}
     if(['operations','depots'].includes(page)){const frame=SURFACE_FRAMES[page==='operations'?'four-area':'workbench'];const h=workspaceIntro.querySelector('h1');h.textContent=page==='operations'?'Explore a day':'Four-area experiments';workspaceIntro.replaceChildren(frameView(frame,{title:h.textContent,heading:'h1',seeds:store.getState().experiment.draft?.seedCount}),el('p',{},page==='operations'?'Use this workspace to change settings and replay one simulated window; Four-area experiments compares a baseline and one change across paired seeds.':'Use Four-area experiments to compare a baseline and one change across paired seeds; the Four-area workspace lets you change settings and replay one simulated window.'),el('details',{},[el('summary',{},'Exact values'),workspaceIdentity.element]),pairedPrimer,...(page==='depots'?[pairedExplainer]:[]));}
@@ -251,7 +251,9 @@ export function mountStudio(app) {
   function applyRoute(hash){
     applying=true;lastHandledHash=hash;
     try{
+      if(hash==='#/city-explorer'&&/^https?:$/.test(browserWindow?.location?.protocol)){browserWindow.location.replace('/city-explorer/');return;}
       const route=parseRoute(hash);
+      if(routeHref(route)!==hash)writeAddress(routeHref(route),true);
       if(route.page==='overview'&&!route.lesson&&!route.setup){const canonical=routeHref(route);globalThis.history?.replaceState(null,'',canonical);lastHandledHash=canonical;}
       if(route.page==='flows'&&!route.lesson&&!route.setup){route.lesson='two-vehicles';const canonical=routeHref(route);globalThis.history?.replaceState(null,'',canonical);lastHandledHash=canonical;}
       const record=route.lesson?records.find(r=>r.id===route.lesson):null;

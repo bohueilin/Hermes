@@ -1,6 +1,6 @@
-// Hosted FleetLab entry points. The standalone teaching/offline build is unchanged.
-// No City renderer, recordings or map data load until the visitor follows a link.
-/** Builds hosted page nodes; refuses on* handlers and javascript: or data: links, like dom.js setAttr. */
+
+
+
 export function hostedNode(doc, tag, attrs, children) {
   const element = doc.createElement(tag);
   for (const [key, value] of Object.entries(attrs || {})) {
@@ -25,7 +25,7 @@ export function mountCityEntry(doc = document) {
   const node = (tag, attrs, children) => hostedNode(doc, tag, attrs, children);
   labLinks.appendChild(node('a', {id:'city-explorer-entry', class:'studio-button', href:'/city-explorer/'}, 'City Explorer'));
   labLinks.appendChild(node('a', {id:'capacity-lab-entry', class:'studio-button', href:'/network-flows/capacity/'}, 'Scheduling or capacity?'));
-  // Replace the offline entry, including its hash-navigation handler, with a native hosted link.
+
   const heroAction = home.querySelector('.hero-actions .studio-button-primary');
   heroAction.parentNode.insertBefore(node('a', {class:'studio-button studio-button-primary',href:'/network-flows/capacity/'}, 'Explore depot operations  →'),heroAction);
   heroAction.remove();
@@ -47,16 +47,16 @@ export function mountCityEntry(doc = document) {
       node('p', {}, 'Inspect a twelve-pair depot experiment on sourced roads. Follow a recorded journey, compare depots, and inspect the map qualification hold.'),
     ]), action('Open City Explorer  →'),
   ]);
-  // Featured questions and the recorded case study are discoverable before the complete library.
+
   catalogGrid.parentNode.insertBefore(catalog, doc.querySelector('.catalog-library-title'));
-  // The depot flow lab rebuilds its hero on every lesson change; the next-lesson line sits under the
-  // Compare help text, below the first-screen action, and the observer restores it after a rebuild.
+
+
   const linkCapacity = () => {
     const help = flowHero.querySelector('p.flow-run-help');
     if (help && !doc.getElementById('capacity-entry')) help.parentNode.insertBefore(node('p', {class:'flow-next-lesson'}, ['Next: test whether scheduling or extra capacity helps. ', node('a', {id:'capacity-entry', href:'/network-flows/capacity/'}, 'Scheduling or capacity?')]), help.nextSibling);
   };
   const originalLinkCapacity = linkCapacity;
-  // This subsequent lesson is present only in the verified hosted generation.
+
   const linkDelivery = () => {
     originalLinkCapacity();
     const line=doc.querySelector('.flow-next-lesson');
@@ -133,6 +133,6 @@ export function mountCityEntry(doc = document) {
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'owner-contact'}, [
     node('span', {}, 'Built by Bo-Huei Lin · Ideas, questions or collaboration?'),
     node('a', {href:'mailto:bohueilin@gmail.com'}, 'bohueilin@gmail.com'),
-    node('time', {datetime:'2026-10-31'}, 'Date: October 31st, 2026'),
+    node('time', {datetime:'2026-11-08'}, 'Date: Nov 8th, 2026'),
   ]));
 }

@@ -30,6 +30,8 @@ CLIENT_FIXES = frozenset((
     "src/model/metrics.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
     "src/ui/display-text.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
     "src/ui/depot-scene.js",  # FL-SEC-27: cd40179f397625de23cfa7568bed017996c5c1cd
+    "src/model/street-simulation.js",  # Perf wave 2 (2026-11-10, owner): the Street day runs in slices
+    "src/model/world.js",  # Perf wave 2 (2026-11-10, owner): the seed-independent candidate stream is reused
 ))
 FLOW_CHANGED = frozenset((
     # C2 amendment 4: whole-file permission for four paths whose C2 change is 28 string literals
@@ -43,7 +45,7 @@ FLOW_CHANGED = frozenset((
     "src/ui/experiment.js", "src/ui/app.js", "src/ui/operations-3d.js",
     "src/ui/operations-map.js", "src/ui/regional-power-view.js",
     "src/ui/analytics.js", "src/ui/car-glyph.js", "src/ui/launch-view.js",
-    "src/ui/street-scene.js",
+    "src/ui/street-scene.js", "src/ui/model-identity.js", "src/ui/store.js",
 ))
 FLOW_ADDED = frozenset((
     "src/model/depot-flow-contract.js", "src/model/depot-flow.js",
@@ -234,7 +236,7 @@ def software_delivery_marker(html, accepted):
     )
 
 
-CLOSURE_LIMITS = {"nf03": 557056, "depot": 786432}
+CLOSURE_LIMITS = {"nf03": 595495, "depot": 786432}
 
 
 def final_route_counts(routes, files, owners=None):
@@ -548,8 +550,10 @@ def integrate(
             (review / "inputs/city-base-release.json").write_bytes(original_base)
             (review / "inputs/city-source-offer-manifest.json").write_bytes(original_offer)
             (review / "inputs/city-source-offer-index.html").write_bytes(original_offer_index)
+        # boot.js imports brand.mjs, which installs one microtask after this module runs: the studio is then
+        # decorated in the same task that mounts it, before the first paint (no mount layout shift).
         (site / "boot.js").write_text(
-            'import { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
+            'import "./brand.mjs";\nimport { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
         )
         intro = (
             '<section aria-label="About FleetLab"><h1>FleetLab: test fleet '

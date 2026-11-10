@@ -33,7 +33,10 @@ test('one attribute setter refuses inline handlers and script-capable URLs',()=>
 
 test('hosted page builders refuse inline handlers and script-capable URLs',()=>{
   const restore=installFakeDom();try{
-    for(const node of [hostedNode,visitorNode]){
+    const ns='http://www.w3.org/2000/svg',svg=(doc,tag,attrs,children=[])=>visitorNode(doc,tag,attrs,children,ns);
+    assert.equal(svg(document,'path',{d:'M0 0L1 1'}).namespaceURI,ns);
+    for(const url of UNSAFE_URLS)assert.throws(()=>svg(document,'a',{'xlink:href':url}),/unsafe attribute xlink:href/);
+    for(const node of [hostedNode,visitorNode,svg]){
       assert.throws(()=>node(document,'a',{onclick:'x'}),/unsafe attribute onclick/);
       for(const url of UNSAFE_URLS)assert.throws(()=>node(document,'a',{href:url}),/unsafe attribute href/);
       for(const url of SAFE_URLS)assert.equal(node(document,'a',{href:url},'Link').getAttribute('href'),url);

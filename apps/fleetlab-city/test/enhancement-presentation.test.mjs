@@ -9,13 +9,30 @@ import {pairLesson} from '../web/view-model.mjs';
 function node(tag,attrs={},text=''){
  const n=document.createElement(tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);n.textContent=text;return n;
 }
-test('founder opens Home below unchanged thesis, with the three-stop tour',()=>{
+test('hosted Depot Flow keeps deadline minutes and task durations readable after rerender',()=>{
+ const restore=installFakeDom(),prior=globalThis.MutationObserver;const updates=[];
+ globalThis.MutationObserver=class{constructor(fn){updates.push(fn);}observe(){}};
+ try{
+  const hero=node('section',{class:'flow-hero'}),question=node('div',{class:'flow-question'}),table=node('table',{class:'flow-setup-table'});
+  const headers=['Due','After upload'].map(t=>node('th',{},t)),cells=['due at minute 15','2 min local step','Already at target'].map(t=>node('td',{},t));
+  table.append(...headers,...cells);hero.append(question,table);document.body.appendChild(hero);decorateVisitors(document);
+  assert.deepEqual(headers.map(n=>n.textContent),['Due (min)','Local step']);
+  assert.deepEqual(cells.map(n=>n.textContent),['15','2 min','At target']);
+  cells[0].textContent='due at minute 5';for(const update of updates)update([]);assert.equal(cells[0].textContent,'5');
+  assert.equal(hero.querySelectorAll('.visitor-diagram').length,1);
+ }finally{globalThis.MutationObserver=prior;restore();}
+});
+test('Home keeps its thesis, first action, byline and three-stop tour in the approved order',()=>{
  const restore=installFakeDom();try{
   const home=node('main',{class:'studio-overview'});document.body.appendChild(home);
   decorateVisitors(document);decorateVisitors(document);
   const intro=home.querySelector('#visitor-purpose');
   assert.equal(intro.querySelector('h1').textContent,'Explore the work between the rides.');
-  assert.equal(intro.querySelector('h1').nextSibling.textContent,'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.');
+  const first=intro.querySelector('.visitor-first-action'),byline=intro.querySelector('.visitor-byline');
+  assert.equal(byline.textContent,'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.');
+  assert.equal(intro.querySelector('h1').nextSibling,intro.querySelector('.visitor-lede'));
+  assert.equal(intro.querySelector('.visitor-lede').nextSibling,first);assert.equal(first.nextSibling,byline);
+  assert.equal(first.getAttribute('href'),'/#/depot-flow-lab?lesson=two-vehicles');
   const tour=home.querySelector('.visitor-tour');assert.ok(tour);
   assert.equal(tour.querySelector('h2').textContent,'The 15-minute tour');
   assert.deepEqual(tour.querySelectorAll('a').map(a=>a.getAttribute('href')),['/#/walkthrough','/network-flows/dispatch/','/city-explorer/#compare']);
