@@ -53,3 +53,14 @@ test('the static studio shell fills the first screen until the studio mounts bef
  // Without this, the privacy note below the shell is visible on phones and is pushed away by the first render.
  assert.match(readFileSync(new URL('../hosted/visitor.css',import.meta.url),'utf8'),/noscript\+#fleetlab-root\{min-height:100vh\}/);
 });
+test('a static page holds what a hosted insertion would push until it lands, and its first header box is the decorated one',()=>{
+ // Readiness, Rebalancing and Dispatch paint before brand.mjs inserts the readiness context and the field notes (the
+ // insertions are pinned in readiness-summary and visitor-design). What follows them stays hidden, never painted and then
+ // moved, until the inserted class exists; the 3 s failsafe shows it if brand.mjs never runs.
+ const css=readFileSync(new URL('../hosted/brand.css',import.meta.url),'utf8');
+ assert.ok(css.includes('.depot-intro:not(:has(.depot-readiness-context)) .lead~*,.depot-intro:not(:has(.depot-readiness-context))~*,.r1-hero:not(:has(.visitor-field))~*,#main>.hero:not(:has(.visitor-field))~*{visibility:hidden;animation:fl-hold 0s 3s forwards}@keyframes fl-hold{to{visibility:visible}}'));
+ // The undecorated brand link takes the logo's 72, 56 and 52 px heights, and a phone header shows no links until its menu exists.
+ // City's masthead is left out, as above: a taller first masthead only lengthens its later drop.
+ assert.equal(css.split('.design-brand,body>header:not(.masthead)>a.brand{').length-1,3);
+ assert.ok(css.includes('@media(max-width:767px){body>header:not(.design-shell,.masthead)>nav{display:none}}'));
+});

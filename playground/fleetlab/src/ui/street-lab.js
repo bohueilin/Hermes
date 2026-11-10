@@ -4,7 +4,9 @@ import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-fr
 import {teachingResult} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
 import {STREET_NETWORK,streetMapDownload} from '../model/street-network.js';
-import {defaultStreetConfig,simulateStreets,compareStreetPolicies,STREET_PRESETS} from '../model/street-simulation.js';
+import {defaultStreetConfig,streetSteps,streetComparisonSteps,STREET_PRESETS} from '../model/street-simulation.js';
+import {runSliced,MAIN_SLICE_MS} from '../runtime/protocol.js';
+import {yieldToPage} from './scale-lab.js';
 import {createStreetScene} from './street-scene.js';
 import {modelHeader} from './model-identity.js';
 const eyebrow=text=>el('p',{class:'eyebrow'},text);
@@ -156,11 +158,11 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  async function run(compare=false){
   if(busy||destroyed)return;pause();busy=true;const captured={...config},version=revision,generation=++runGeneration;fields.disabled=true;setBusy(runButton,true);setBusy(compareButton,true);status.textContent=compare?'Comparing both policies on identical demand…':'Building the street experiment…';error.hidden=true;
   await new Promise(resolve=>setTimeout(resolve,0));
-  try{if(destroyed||generation!==runGeneration)return;const nextComparison=compare?compareStreetPolicies(captured,network):null,nextResult=nextComparison?.baseline??simulateStreets(captured,network);comparison=nextComparison;result=nextResult;time=0;stale=revision!==version;selected='AV-01';edgeId=null;lastDetails='';timeline.max=String(captured.duration_minutes*60);
+  try{if(destroyed||generation!==runGeneration)return;const outcome=await runSliced(compare?streetComparisonSteps(captured,network):streetSteps(captured,network),{get cancelled(){return destroyed||generation!==runGeneration;}},{now:()=>performance.now(),schedule:yieldToPage,budgetMs:MAIN_SLICE_MS}),nextComparison=compare?outcome:null,nextResult=compare?outcome.baseline:outcome;/* The results render gets a task of its own, not the last compute slice's. */await new Promise(yieldToPage);if(destroyed||generation!==runGeneration)return;comparison=nextComparison;result=nextResult;time=0;stale=revision!==version;selected='AV-01';edgeId=null;lastDetails='';timeline.max=String(captured.duration_minutes*60);
    vehicleSelect.replaceChildren(...result.frames[0].vehicles.map(v=>el('option',{value:v.id},v.id)));vehicleSelect.value=selected;comparisonView.hidden=!comparison;
    status.textContent=stale?'Settings changed; this is the previous run.':compare?'Comparison complete. Result summary ready. Press Play to replay either policy.':'Scenario complete. Result summary ready. Press Play to replay.';
    showResults();scene.focus(captured.hotspot);render();if(!element.hidden)resultHeading.focus({preventScroll:true});
-  }catch(e){error.textContent=displayText(e.message);error.hidden=false;status.textContent='Check the settings and try again.';}finally{if(generation===runGeneration){busy=false;fields.disabled=false;setBusy(runButton,false);setBusy(compareButton,false);}}
+  }catch(e){if(destroyed||generation!==runGeneration)return;error.textContent=displayText(e.message);error.hidden=false;status.textContent='Check the settings and try again.';}finally{if(generation===runGeneration){busy=false;fields.disabled=false;setBusy(runButton,false);setBusy(compareButton,false);}}
  }
  sync();render();
  return {setLesson(record){lesson=record;lessonEdited=false;result=null;comparison=null;stale=false;results.replaceChildren(resultHeading,el('p',{},'Run this lesson to read its results.'));element.querySelector('h1').textContent=record.title;status.textContent='Lesson loaded: '+record.title+'. Press Run when ready.';time=0;lastDetails='';render();renderTeaching();},element,run,setConfig,getSharedSetup,loadSharedSetup,pause,seek,refresh:()=>scene.refresh(),getState:()=>({run:result,time,playing,stale,busy}),destroy(){destroyed=true;pause();scene.destroy();}};

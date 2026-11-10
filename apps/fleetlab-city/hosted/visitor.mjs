@@ -9,6 +9,11 @@ export function node(doc,tag,attrs={},children=[],namespace=null){
  for(const child of [children].flat())if(child!=null)n.appendChild(typeof child==='string'?doc.createTextNode(child):child);
  return n;
 }
+// A hidden studio route fetches no image: its eager images wait as lazy, marked data-eager, until the route is shown.
+export function syncRouteImages(doc){
+ for(const img of doc.querySelectorAll('img:not([loading="lazy"])'))if(img.closest('[hidden]')){img.setAttribute('data-eager','');img.setAttribute('loading','lazy');}
+ for(const img of doc.querySelectorAll('img[data-eager]'))if(!img.closest('[hidden]')){img.removeAttribute('data-eager');img.setAttribute('loading','eager');}
+}
 
 const FIELD_NOTES={
 rebalancing:['An MIT study of Waymo’s California filings found that 43–45% of miles were driven without passengers from mid-2025 through December 2025. This includes travel to pickups as well as repositioning.','MIT researcher · Findings, May 2026','https://doi.org/10.32866/001c.161870'],
@@ -213,6 +218,7 @@ for(const target of doc.querySelectorAll('.studio-overview,.operations-lab,.stud
 ]));
 decorateFieldNotes(doc);
 decorateConceptMedia(doc,node);
+syncRouteImages(doc);
 }
 
 

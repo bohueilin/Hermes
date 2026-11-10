@@ -1,4 +1,4 @@
-import {decorateVisitors,node} from './visitor.mjs';
+import {decorateVisitors,node,syncRouteImages} from './visitor.mjs';
 // Hosted presentation. No simulation, result, map or playback logic is changed.
 const media='/site-media/';
 export function decorateDesign(doc=document){
@@ -113,6 +113,7 @@ export function decorateCityOrientation(doc=document){
 const installed=new WeakSet();
 export function installDesign(doc=document){
 if(installed.has(doc))return;installed.add(doc);decorateDesign(doc);
+new MutationObserver(()=>syncRouteImages(doc)).observe(doc.body,{attributes:true,attributeFilter:['hidden'],subtree:true});
 const selector='.studio-monogram,.delivery-brand,a.brand,.studio-overview,.approach-intro,.depot-flow-lab,.capacity-map,[data-concept="fleet"]';
 new MutationObserver(rows=>{if(rows.some(r=>{const n=r.target;return n?.closest?.('#setup,#outcome,#preset');}))decorateDepotPipes(doc);if(rows.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches(selector)||n.querySelector(selector)))))decorateDesign(doc);}).observe(doc.body,{childList:true,subtree:true});
 }

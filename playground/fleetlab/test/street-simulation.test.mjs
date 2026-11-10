@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {defaultStreetConfig,simulateStreets,compareStreetPolicies} from '../src/model/street-simulation.js';
+import {defaultStreetConfig,simulateStreets,compareStreetPolicies,streetSteps,streetComparisonSteps} from '../src/model/street-simulation.js';
 const nodes=[{id:'a',x:0,y:0},{id:'b',x:1,y:0},{id:'c',x:1,y:1},{id:'d',x:0,y:1}];
 const edges=[];for(const [from,to] of [['a','b'],['b','a'],['b','c'],['c','b'],['c','d'],['d','c'],['d','a'],['a','d']]){const a=nodes.find(n=>n.id===from),b=nodes.find(n=>n.id===to);edges.push({id:from+to,from,to,name:from+to,length_m:1000,speed_kph:60,lanes:1,points:[[a.x,a.y],[b.x,b.y]],hotspot:from==='a'?'first':null});}
 const anchors=[['fidi','a'],['soma','b'],['chinatown','c'],['sfo','d'],['east-bay','c']].map(([id,node])=>({id,node,label:id,...nodes.find(n=>n.id===node),id}));
@@ -46,4 +46,10 @@ test('busy vehicle minutes integrate only the elapsed intervals, not the final i
  const r=simulateStreets(config(),network);
  const fromRecordedIntervals=r.frames.slice(0,-1).reduce((sum,f)=>sum+f.vehicles.filter(v=>v.state!=='available').length*5/60,0);
  assert.ok(Math.abs(r.summary.busy_vehicle_minutes-fromRecordedIntervals)<1e-8);
+});
+test('the stepped run yields once per 5-second tick and returns exactly what the direct run returns',()=>{
+ let steps=streetSteps(config(),network),ticks=0,s;while(!(s=steps.next()).done)ticks++;
+ assert.equal(ticks,30*12+1);assert.deepEqual(s.value,simulateStreets(config(),network));
+ steps=streetComparisonSteps(config(),network);let n=0;while(!(s=steps.next()).done)n++;
+ assert.equal(n,2*ticks);assert.deepEqual(s.value,compareStreetPolicies(config(),network));
 });

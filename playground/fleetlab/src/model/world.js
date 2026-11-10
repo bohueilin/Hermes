@@ -207,6 +207,8 @@ export function warmTables(sigmaPermille) {
   return { sigma_permille: sigmaPermille };
 }
 
+let lastStream = { key: null, candidates: null };
+
 /**
  * Builds the frozen world of one seed from the declared scenario (contract 6.3): candidates per area as
  * `{t_s, thin, dest}` arrays (seconds, u32 draws), the envelope in thousandths, and bound factor accessors
@@ -224,24 +226,31 @@ export function buildWorld(scenario, { seed, lambdaMaxPermille } = {}) {
   const exp = expTable();
   const draw = keyedU64Source(scenario.name);
 
-  const candidates = {};
-  for (const id of Object.keys(envelope)) {
-    const t_s = [];
-    const thin = [];
-    const dest = [];
-    const lambdaMax = envelope[id];
-    if (lambdaMax > 0) {
-      let t = start_s;
-      for (let k = 0; ; k++) {
-        t += gapSeconds(exp[Number(draw("gap", id, k) >> 48n)], lambdaMax);
-        if (t >= end_s) break;
-        t_s.push(t);
-        thin.push(Number(draw("thin", id, k) >> 32n));
-        dest.push(Number(draw("dest", id, k) >> 32n));
+  // The candidate stream depends on the demand key, window and envelope, never on the seed: an experiment's world per
+  // seed reuses the last stream (frozen, so sharing it is safe) instead of drawing the same stream again.
+  const key = JSON.stringify([scenario.name, start_s, end_s, envelope]);
+  if (lastStream.key !== key) {
+    const candidates = {};
+    for (const id of Object.keys(envelope)) {
+      const t_s = [];
+      const thin = [];
+      const dest = [];
+      const lambdaMax = envelope[id];
+      if (lambdaMax > 0) {
+        let t = start_s;
+        for (let k = 0; ; k++) {
+          t += gapSeconds(exp[Number(draw("gap", id, k) >> 48n)], lambdaMax);
+          if (t >= end_s) break;
+          t_s.push(t);
+          thin.push(Number(draw("thin", id, k) >> 32n));
+          dest.push(Number(draw("dest", id, k) >> 32n));
+        }
       }
+      candidates[id] = Object.freeze({ t_s: Object.freeze(t_s), thin: Object.freeze(thin), dest: Object.freeze(dest) });
     }
-    candidates[id] = Object.freeze({ t_s: Object.freeze(t_s), thin: Object.freeze(thin), dest: Object.freeze(dest) });
+    lastStream = { key, candidates: Object.freeze(candidates) };
   }
+  const candidates = lastStream.candidates;
 
   const trafficCache = new Map();
   const world = {

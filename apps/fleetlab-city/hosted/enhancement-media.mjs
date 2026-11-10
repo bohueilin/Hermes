@@ -10,7 +10,7 @@ export function decorateConceptMedia(doc,createNode){
   const [width,height]=file.includes('FL-A2')?[2352,1008]:file.includes('FL-A3')?[2240,1120]:file.includes('FL-V2')?[1280,720]:[2048,1152];
   const img=el('img',{src:base+file,alt,width:String(width),height:String(height),loading:file.includes('FL-A2')?'eager':'lazy',...(file.includes('FL-A2')?{fetchpriority:'high'}:{}),decoding:'async'});
   const media=el('div',{class:'enhancement-visual'},img);
-  if(film)media.appendChild(el('video',{'data-concept-src':base+film,poster:base+file,preload:'none',muted:'',loop:'',playsinline:'',hidden:'','aria-label':alt}));
+  if(film)media.appendChild(el('video',{'data-concept-src':base+film,preload:'none',muted:'',loop:'',playsinline:'',hidden:'','aria-label':alt}));
   return el('figure',{id,class:'enhancement-media',...(film?{'data-concept-media':'','data-concept-state':'poster'}:{})},[
    media,el('figcaption',{},[el('p',{class:'enhancement-fence'},qualification),...(caption?[el('p',{class:'enhancement-caption'},caption)]:[])]),
   ]);

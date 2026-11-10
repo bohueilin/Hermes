@@ -15,9 +15,9 @@ import {createStore,createInitialState} from '../src/ui/store.js';
 import {defaultScenario} from '../src/model/schema.js';
 import {moduleGraph} from '../tools/pack.mjs';
 import {fileURLToPath} from 'node:url';
-import vm from 'node:vm';
 import {buildHtml} from '../tools/pack.mjs';
 import {serialize} from './helpers/fake-dom.mjs';
+import {mountPackedPage} from './helpers/packed-page.mjs';
 import * as labels from '../src/ui/labels.js';
 import * as format from '../src/ui/format.js';
 import * as experiment from '../src/ui/experiment.js';
@@ -431,12 +431,7 @@ test('the declared test says before any run that the interval label is nominal a
 });
 
 test('the packed page presses Run for every lab and records what the native module records (FLEET_PLAYGROUND_PERF=1)',{skip:process.env.FLEET_PLAYGROUND_PERF!=='1'&&'set FLEET_PLAYGROUND_PERF=1'},async()=>{
-  // The Fleet day engine clones its configuration, so the packed page needs structuredClone, as every browser gives it.
-  const context=vm.createContext({console,performance,setTimeout,clearTimeout,URL,URLSearchParams,Blob,structuredClone}),uninstall=installFakeDom(context),document=uninstall.dom.document;
-  const shell=document.createElement('div'),strip=document.createElement('div');shell.id='fleetlab-root';strip.id='fleetlab-teaching-strip';shell.append(strip);document.body.append(shell);
-  context.Worker=class{constructor(){queueMicrotask(()=>this.onmessage?.({data:{type:'ready'}}));}postMessage(){}terminate(){}};
-  const app=new vm.Script(/<script>\n([\s\S]*)\n<\/script>/.exec(buildHtml(fileURLToPath(new URL('../',import.meta.url))))[1]).runInContext(context);
-  await app.host.ready;
+  const {app,close}=await mountPackedPage(buildHtml(fileURLToPath(new URL('../',import.meta.url))));
   try{
     for(const lab of SCALE_LABS){
       app.studio.applyRoute(`#/scale-lab?lesson=${lab.id}`);
@@ -446,7 +441,7 @@ test('the packed page presses Run for every lab and records what the native modu
       assert.equal(scaleJson(JSON.parse(JSON.stringify(packed))),scaleJson(JSON.parse(JSON.stringify(native))),`${lab.id}: the packed record equals the native record`);
       assert.ok(root.querySelector('.fl-readout')&&root.querySelector('figure.fl-chart'));assert.equal(root.querySelector('[role="alert"]').hidden,true);
     }
-  }finally{app.destroy();uninstall();}
+  }finally{close();}
 });
 
 test('every press stays inside its run budget and names its controls from the allowed set',()=>{

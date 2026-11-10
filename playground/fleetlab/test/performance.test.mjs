@@ -136,7 +136,7 @@ describe("wall-clock budgets of design 5.9 (FLEET_PLAYGROUND_PERF=1)", { skip: P
       }
       yields += 1;
     }
-    const text = `largest gap ${largest.ms.toFixed(2)} ms (process CPU ${largest.cpuMs.toFixed(2)} ms), ending at ${largest.label}, over ${yields} yields`;
+    const text = `largest gap ${largest.ms.toFixed(2)} ms (process CPU ${largest.cpuMs.toFixed(2)} ms, ${(8 - largest.ms).toFixed(2)} ms under the 8 ms budget), ending at ${largest.label}, over ${yields} yields`;
     t.diagnostic(text);
     assert.deepEqual(out, warm, "slicing never changes the payload");
     assert.ok(largest.ms <= 8, text);
