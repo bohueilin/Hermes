@@ -548,8 +548,10 @@ def integrate(
             (review / "inputs/city-base-release.json").write_bytes(original_base)
             (review / "inputs/city-source-offer-manifest.json").write_bytes(original_offer)
             (review / "inputs/city-source-offer-index.html").write_bytes(original_offer_index)
+        # boot.js imports brand.mjs, which installs one microtask after this module runs: the studio is then
+        # decorated in the same task that mounts it, before the first paint (no mount layout shift).
         (site / "boot.js").write_text(
-            'import { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
+            'import "./brand.mjs";\nimport { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
         )
         intro = (
             '<section aria-label="About FleetLab"><h1>FleetLab: test fleet '

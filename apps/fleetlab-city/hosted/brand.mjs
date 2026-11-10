@@ -369,5 +369,5 @@ export function installConceptMotion(doc=document){
 
 if(typeof document!=='undefined'){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>installDesign(),{once:true});
-else installDesign();
+else queueMicrotask(installDesign);
 }

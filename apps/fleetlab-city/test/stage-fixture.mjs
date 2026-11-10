@@ -48,7 +48,7 @@ function integratedShell(packed,source){
   '\n/downloads/fleetlab-offline\n  Content-Disposition: attachment; filename="fleetlab-offline.html"\n'+
   `\n/${source}\n  Content-Type: application/gzip\n  Content-Disposition: attachment; filename="fleetlab-teaching-source.json.gz"\n  ! Cache-Control\n  Cache-Control: public, max-age=31536000, immutable\n`+
   '\n/downloads/teaching-package.json\n  Content-Type: application/json\n';
- return [...lessonNavigation(packed),['index.html',html],['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+packed.get('boot.js')+'\nmountCityEntry();\n'],['_headers',headers]];
+ return [...lessonNavigation(packed),['index.html',html],['boot.js','import "./brand.mjs";\nimport { mountCityEntry } from "./integration.mjs";\n'+packed.get('boot.js')+'\nmountCityEntry();\n'],['_headers',headers]];
 }
 
 export function stageFixture({gzipCity=false}={}){

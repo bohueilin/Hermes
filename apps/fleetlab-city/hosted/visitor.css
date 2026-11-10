@@ -115,3 +115,4 @@ html[data-visitor-motion=paused] summary::before{transition:none!important}
 .flow-hero>.flow-setup-card{grid-column:1/-1;min-width:0}.flow-hero>.visitor-diagram{grid-column:2;grid-row:4;margin:0;width:100%;max-width:none}.flow-hero .flow-setup-table{table-layout:auto;width:100%}.flow-hero .flow-setup-table th,.flow-hero .flow-setup-table td{overflow-wrap:normal}.flow-hero .flow-setup-table caption{text-align:left}@media(max-width:999px){.flow-hero>.visitor-diagram{margin:20px 0;max-width:540px}.flow-hero>.flow-setup-card{margin-top:20px}}
 
 @media(min-width:768px){.bay-map-legend{flex-wrap:wrap}#visitor-insights .start-grid{grid-template-columns:repeat(6,minmax(0,1fr))}#visitor-insights .start-card{grid-column:span 2}#visitor-insights .start-card:nth-last-child(-n+2){grid-column:span 3}}
+noscript+#fleetlab-root{min-height:100vh}

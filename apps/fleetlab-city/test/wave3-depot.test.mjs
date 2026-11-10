@@ -94,3 +94,14 @@ test('browser module initialization decorates an already interactive Readiness d
  assert.ok(intro.querySelector('.depot-pipe'));
  }finally{globalThis.MutationObserver=prior;restore();}
 });
+test('the hosted boot module imports brand.mjs, so the studio it mounts is decorated before the first paint',async()=>{
+ const restore=installFakeDom(),prior=globalThis.MutationObserver;
+ globalThis.MutationObserver=class{observe(){}disconnect(){}};
+ try{
+ Object.defineProperty(document,'readyState',{value:'interactive',configurable:true});
+ // Mirrors boot.js: import brand.mjs, then mount the studio synchronously in the same module evaluation.
+ const brand=new URL('../hosted/brand.mjs?boot-order',import.meta.url).href;
+ await import('data:text/javascript,'+encodeURIComponent(`import ${JSON.stringify(brand)};const home=document.createElement('section');home.className='studio-overview';document.body.appendChild(home);`));
+ assert.ok(document.getElementById('visitor-purpose'));
+ }finally{globalThis.MutationObserver=prior;restore();}
+});

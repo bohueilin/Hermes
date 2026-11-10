@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {installFakeDom} from '../../../playground/fleetlab/test/helpers/fake-dom.mjs';
 import {decorateDesign,decorateShell,decorateCityOrientation} from '../hosted/brand.mjs';
 
@@ -40,4 +41,15 @@ test('qualification lead explains the checklist without editing any ledger rows 
   assert.equal(ledger.textContent,'Road-class support FAIL · Semantic inspection NOT_RUN');assert.equal(document.querySelectorAll('#design-ledger-lead').length,1);
   assert.equal(exact.parentNode.tagName,'DETAILS');assert.match(exact.textContent,/no_reachable_depot/);assert.match(correction.textContent,/did not cross the reserve threshold/);
  }finally{restore();}
+});
+test('a static page header gets the shell box from brand.css before brand.mjs decorates it',()=>{
+ // Readiness paints its HTML header before any module runs; giving that header the final box keeps main from moving.
+ // City's masthead is left out: its tabs move into main when decorated, so its first box cannot match the final one.
+ const css=readFileSync(new URL('../hosted/brand.css',import.meta.url),'utf8');
+ assert.equal(css.match(/header\.design-shell\{/g),null);
+ assert.equal(css.split('header:is(.design-shell,body>:where(:not(.masthead))){').length-1,3);
+});
+test('the static studio shell fills the first screen until the studio mounts before it',()=>{
+ // Without this, the privacy note below the shell is visible on phones and is pushed away by the first render.
+ assert.match(readFileSync(new URL('../hosted/visitor.css',import.meta.url),'utf8'),/noscript\+#fleetlab-root\{min-height:100vh\}/);
 });
