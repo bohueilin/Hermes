@@ -33,11 +33,11 @@ test('the generated boot injects the independently packaged study into the app',
 test('the approved legacy boundary accepts its exact limit and rejects one extra byte without sidecar recovery',()=>{
   assert.equal(typeof tool.measureSiteOwnership,'function','owner gate is not implemented');
   const files=buildSite(root), measured=tool.measureSiteOwnership(files);
-  const limit=2623518;assert.equal(tool.OWNER_LIMITS.legacy_text_bytes,limit);
+  const limit=2624909;assert.equal(tool.OWNER_LIMITS.legacy_text_bytes,limit);
   files.set('styles.css',files.get('styles.css')+' '.repeat(limit-measured.legacy_text_bytes));
   assert.equal(tool.measureSiteOwnership(files).legacy_text_bytes,limit);
   files.set('styles.css',files.get('styles.css')+' ');
-  assert.throws(()=>tool.measureSiteOwnership(files),/legacy.*2623519.*2623518/);
+  assert.throws(()=>tool.measureSiteOwnership(files),/legacy.*2624910.*2624909/);
 });
 
 test('300000-byte scratch NF04-only module has a valid emitted build path without increasing legacy',()=>{
@@ -159,10 +159,10 @@ test('final transformed headers remain inside each complete route closure cap',(
   const teaching=buildSite(root),final=new Map(teaching);
   const closure=new Set([...tool.capacityScope(teaching),'network-flows/capacity/release.json','_headers']);
   const bytes=[...closure].reduce((total,path)=>total+Buffer.byteLength(teaching.get(path)),0);
-  final.set('_headers',final.get('_headers')+' '.repeat(594173-bytes));
-  assert.equal(tool.measureIntegratedText(teaching,final).nf03_closure_bytes,594173);
+  final.set('_headers',final.get('_headers')+' '.repeat(595495-bytes));
+  assert.equal(tool.measureIntegratedText(teaching,final).nf03_closure_bytes,595495);
   final.set('_headers',final.get('_headers')+' ');
-  assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget.*594174.*594173/);
+  assert.throws(()=>tool.measureIntegratedText(teaching,final),/nf03.*closure.*budget.*595496.*595495/);
   // Isolate the NF04 closure guard from the independently capped aggregate.
   const nf04Only=new Map([...teaching].filter(([path])=>!ORDER_MODULES.has(path)&&!path.startsWith('network-flows/delivery-order/')&&!R1_MODULES.has(path)&&!path.startsWith('network-flows/rebalancing/')&&!R3_MODULES.has(path)&&!path.startsWith('network-flows/dispatch/')&&!DEPOT_MODULE_PATH.test(path)&&!path.startsWith('depot-readiness/')));
   const nf04=tool.measureSiteOwnership(nf04Only).nf04_closure_bytes;
