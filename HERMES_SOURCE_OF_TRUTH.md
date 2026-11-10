@@ -89,6 +89,8 @@ All copies moved together:
 - the two production NF03 guards and their two test copies;
 - the Offline pin in `package-proof.mjs`, `package-proof.test.mjs`, `stage-check.mjs` and its test, `depot-lab-package.test.mjs`, `enhancement-packaging.test.mjs`, and `capacity-site.test.mjs`. The last one writes the pin with numeric separators (`2_586_822`), so search with and without them.
 
+On `main`, the reconcile also wraps four over-long lines in `apps/fleetlab-city/tools/integrate-site.py` for ruff E501, making it 57 B smaller. The release branch never ran CI, so these lines first met the linter here. `main`'s development baselines in `stepa-baselines.test.mjs` are therefore re-measured lower than the release's: integration source 444,966; development source offer 4,160,454 extracted and 1,172,228 compressed. The stage bounds in `stage-check.mjs` keep the released values until the next release re-pins them.
+
 ### Checkouts and branches (2026-11-10)
 
 | Where | What |
