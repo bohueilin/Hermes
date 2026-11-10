@@ -30,8 +30,8 @@ CLIENT_FIXES = frozenset((
     "src/model/metrics.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
     "src/ui/display-text.js",  # FL-SEC-13: 49420b866ff5cab7c21408dd37eef83c981fe914
     "src/ui/depot-scene.js",  # FL-SEC-27: cd40179f397625de23cfa7568bed017996c5c1cd
-    "src/model/street-simulation.js",  # Perf wave 2 (2026-11-10, owner): the Street day runs in slices
-    "src/model/world.js",  # Perf wave 2 (2026-11-10, owner): the seed-independent candidate stream is reused
+    "src/model/street-simulation.js",  # Perf wave 2 (2026-11-10, owner): sliced Street day
+    "src/model/world.js",  # Perf wave 2 (2026-11-10, owner): reused candidate stream
 ))
 FLOW_CHANGED = frozenset((
     # C2 amendment 4: whole-file permission for four paths whose C2 change is 28 string literals
@@ -550,10 +550,11 @@ def integrate(
             (review / "inputs/city-base-release.json").write_bytes(original_base)
             (review / "inputs/city-source-offer-manifest.json").write_bytes(original_offer)
             (review / "inputs/city-source-offer-index.html").write_bytes(original_offer_index)
-        # boot.js imports brand.mjs, which installs one microtask after this module runs: the studio is then
-        # decorated in the same task that mounts it, before the first paint (no mount layout shift).
+        # boot.js imports brand.mjs, which installs a microtask after this module runs, so the
+        # studio is decorated in the task that mounts it, before the first paint.
         (site / "boot.js").write_text(
-            'import "./brand.mjs";\nimport { mountCityEntry } from "./integration.mjs";\n' + boot + "\nmountCityEntry();\n"
+            'import "./brand.mjs";\nimport { mountCityEntry } from "./integration.mjs";\n'
+            + boot + "\nmountCityEntry();\n"
         )
         intro = (
             '<section aria-label="About FleetLab"><h1>FleetLab: test fleet '
