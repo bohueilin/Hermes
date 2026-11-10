@@ -16,8 +16,8 @@ import {fingerprint,writeFiles} from './stage-fixture.mjs';
 // Unit text sits 1,859 B under the stage: publication.json (1,800 B) is stage-only and the release receipt is 59 B longer.
 // Uncommitted bound files read 9 B low per sidecar; only depot-owned text, which must stay unchanged, has a floor. nf03 stays enhancement-packaging's gate.
 // Catalog look_for wave (2026-10-31, owner D9): emitted_text_bytes re-based from 3577477-1859 to the measured unit 3575832, no allowance.
-// Wave 2 (2026-11-05, owner W2-D2): exact measured minimum ceilings.
-const BOUNDS={nf04_closure_bytes:275399,delivery_order_closure_bytes:280523,r1_closure_bytes:251602,r3_closure_bytes:207306,depot_closure_bytes:567205,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3643873,integration_text_bytes:180804,brand_text_bytes:127623};
+// Wave 2 (2026-11-05, owner W2-D2): exact measured minimum ceilings. Perf wave (2026-11-09, owner): re-measured exactly.
+const BOUNDS={nf04_closure_bytes:275557,delivery_order_closure_bytes:280681,r1_closure_bytes:252045,r3_closure_bytes:207464,depot_closure_bytes:567363,depot_route_local_bytes:[418159-9,418159],emitted_text_bytes:3644338,integration_text_bytes:180984,brand_text_bytes:127781};
 const within=(key,value)=>{const bound=BOUNDS[key];return Array.isArray(bound)?value>=bound[0]&&value<=bound[1]:value<=bound;};
 const bound=key=>JSON.stringify(BOUNDS[key]??'enhancement-packaging.test.mjs');
 const report=(key,value,claim=`outside ${bound(key)}`)=>`${key} ${value} ${claim} (node ${process.version})`;

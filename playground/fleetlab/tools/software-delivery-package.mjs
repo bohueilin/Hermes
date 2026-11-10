@@ -16,8 +16,8 @@ export const DELIVERY_MODULES=new Set([...DELIVERY_ENTRIES,'src/runtime/software
 export const DELIVERY_BOOT='import { startSoftwareDelivery } from "../../src/ui/software-delivery-app.js";\nimport { DELIVERY_STUDY } from "../../src/data/software-delivery-study.js";\nstartSoftwareDelivery({ manifest: DELIVERY_STUDY, createWorker: () => new Worker(new URL("../../src/runtime/software-delivery-worker.js", import.meta.url), { type: "module" }) });\n';
 export const INTEGRATION_TEXT_PATHS=['city-explorer/releases/index.html','brand.mjs','brand.css','visitor.mjs','visitor-families.mjs','visitor.css','enhancement-motion.mjs','enhancement-media.mjs','enhancement-media.css','index.html','boot.js','_headers','integration.mjs','integration.css','publication.json','404.html','network-flows/fleet-day/index.html','network-flows/index.html','network-flows/hub.css','network-flows/ota-sharing/index.html','sitemap.xml','not-found.css','downloads/fleetlab-offline.sha256','downloads/verify-offline.txt'];
 // Q6: the integrated text ceiling rises to 3,801,088 and the depot gets its own branch; every other cap is unchanged.
-export const OWNER_LIMITS=Object.freeze({legacy_text_bytes:2623233,emitted_text_bytes:3801088,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432});
-const CLOSURE_LIMITS={nf03:594015,depot:OWNER_LIMITS.depot_closure_bytes};
+export const OWNER_LIMITS=Object.freeze({legacy_text_bytes:2623518,emitted_text_bytes:3801088,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432});
+const CLOSURE_LIMITS={nf03:594173,depot:OWNER_LIMITS.depot_closure_bytes};
 const LEGACY_ENTRIES=['src/ui/app.js','src/runtime/worker.js','src/ui/capacity-app.js'];
 const LEGACY_ASSETS=['index.html','boot.js','styles.css','_headers','network-flows/capacity/index.html','network-flows/capacity/boot.js','network-flows/capacity/visual.css','network-flows/capacity/release.json'];
 const NF03_ASSETS=['styles.css','network-flows/capacity/index.html','network-flows/capacity/boot.js','network-flows/capacity/visual.css'];

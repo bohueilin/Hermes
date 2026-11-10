@@ -91,7 +91,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.counts.depot_route_local_bytes, measureSiteOwnership(files).depot_route_local_bytes);
   assert.ok(receipt.counts.depot_closure_bytes <= 786432 && receipt.counts.depot_route_local_bytes <= 524288);
   assert.ok(receipt.counts.package_metadata_bytes <= 57344 && receipt.counts.source_offer_extracted_bytes <= 5242880);
-  assert.ok(receipt.counts.offline_bytes <= 2585068);
+  assert.ok(receipt.counts.offline_bytes <= 2585353);
   assert.equal(receipt.offline.reserved_bytes, APP_MAX_BYTES - readFileSync(offline).length);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
@@ -131,9 +131,10 @@ test("the offline edition reproduces the approved catalog look_for bytes exactly
   // C2 amendment 1: ops-cases.js is bundled twice, so its byte delta counts twice and the offline edition moves less than the source.
   // Catalog look_for wave (2026-10-31, owner D2): re-pinned from the C2 pair (2566962, e49c0aba...) to the measured bytes and SHA-256.
   // Wave 2C (2026-11-05, owner D1-D9 GO): recomputed from the reviewed implementation tree.
+  // Perf wave (2026-11-09, owner): the explainer's viewport gate adds 285 B.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2585068);
-  assert.equal(hash(html), "d8b5e5f146b9cbe3906995a9ca52d645fcc507c2ee858e1e676bec212b5bf855");
+  assert.equal(Buffer.byteLength(html), 2585353);
+  assert.equal(hash(html), "9a26d4dfccb589ad9bf93967d85bea6c00a3fb437f5996115850a46a9dff6acd");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {
