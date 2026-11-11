@@ -30,7 +30,8 @@ test('concept motion obeys real CSS pause, visibility and reduced-motion gates w
     root.removeAttribute('data-visitor-user-paused');await wait(150);await settle();await wait(50);const resumed=animation?.currentTime;trace.resumed={play:animation?.playState,frames};
     document.querySelector('.visitor-motion-control').click();await wait(100);const global=getComputedStyle(pod,pseudo).animationPlayState;
     document.querySelector('.visitor-motion-control').click();await wait(100);
-    scrollTo({top:0,behavior:'instant'});await wait(150);const offscreen=target.getAttribute('data-concept-motion-state');
+    // Viewport and media-query changes reach the page with a rendered frame, so wait for the state rather than a fixed time.
+    scrollTo({top:0,behavior:'instant'});for(let i=0;i<20&&target.getAttribute('data-concept-motion-state')!=='paused';i++)await wait(100);const offscreen=target.getAttribute('data-concept-motion-state');
     target.scrollIntoView({block:'center',behavior:'instant'});await wait(150);
     return{running,gates,trace,name:animation?.animationName,immediate,first,held,resumed,global,offscreen,overflow:document.documentElement.scrollWidth>innerWidth,caption:target.closest('figure')?.querySelector('figcaption')?.textContent??target.closest('.depot-pipe')?.querySelector('.depot-pipe-caption')?.textContent};
    })()`);
@@ -39,7 +40,9 @@ test('concept motion obeys real CSS pause, visibility and reduced-motion gates w
    assert.equal(result.global,'paused');assert.ok(result.name,'the pod animation is found');assert.equal(result.held,result.first,`paused phase does not advance ${JSON.stringify(result.trace)}`);assert.ok(result.resumed>result.held,`resuming continues the held animation ${JSON.stringify(result.trace)}`);
    assert.equal(result.offscreen,'paused');assert.equal(result.overflow,false);assert.equal(result.caption,'Concept illustration · not simulation output');
    await page.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
-   const reduced=await page.evaluate(`new Promise(done=>setTimeout(()=>{const n=document.querySelector('${selector}'),p=n.querySelector('${particle}');done({state:n.getAttribute('data-concept-motion-state'),animation:getComputedStyle(p,${selector.includes('pipe')?"'::after'":"null"}).animationName,visible:n.getBoundingClientRect().height>0});},100))`);
+   const reduced=await page.evaluate(`(async()=>{const n=document.querySelector('${selector}'),p=n.querySelector('${particle}');
+    for(let i=0;i<20&&n.getAttribute('data-concept-motion-state')!=='paused';i++)await new Promise(done=>setTimeout(done,100));
+    return{state:n.getAttribute('data-concept-motion-state'),animation:getComputedStyle(p,${selector.includes('pipe')?"'::after'":"null"}).animationName,visible:n.getBoundingClientRect().height>0};})()`);
    assert.deepEqual(reduced,{state:'paused',animation:'none',visible:true});
    await page.send('Emulation.setEmulatedMedia',{features:[]});
   }
