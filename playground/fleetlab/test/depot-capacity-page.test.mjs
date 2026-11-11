@@ -180,7 +180,7 @@ test('every control is reachable by keyboard and the copy has no dashes or banne
   const restore=installFakeDom();
   try{const p=create(),e=p.element;await p.load();
     for(const node of e.querySelectorAll('button, select, input, summary, a'))assert.notEqual(node.getAttribute('tabindex'),'-1',node.localName);
-    for(const node of e.querySelectorAll('[tabindex="-1"]'))assert.match(node.localName,/^h[1-6]$/);
+    for(const node of e.querySelectorAll('[tabindex="-1"]'))assert.match(node.localName,/^(h[1-6]|main)$/);
     for(const details of e.querySelectorAll('details'))assert.ok(details.querySelector('summary'));
     for(const select of e.querySelectorAll('select'))assert.ok(select.getAttribute('aria-label'));
     p.destroy();

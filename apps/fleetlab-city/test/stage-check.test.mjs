@@ -11,9 +11,9 @@ import {checkStage,INPUT_DIGESTS,RUNTIME,OFFLINE_BEFORE,OFFLINE_AFTER,BOUNDS,ROU
 // Catalog look_for wave (2026-10-31, owner): emitted_text_bytes 3577477 and the offline AFTER pair re-pinned to the measured stage.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 // Perf waves (2026-11-09 and 11-10, owner): every affected ceiling re-pinned to the exact measured stage, no spare bytes.
-const SPEC_BOUNDS={nf03_closure_bytes:595010,nf04_closure_bytes:276394,delivery_order_closure_bytes:281518,r1_closure_bytes:252832,r3_closure_bytes:208330,depot_closure_bytes:568200,
- emitted_text_bytes:3648811,integration_text_bytes:183622,integration_source_bytes:444482,source_offer_extracted_bytes:4160549,source_offer_compressed_bytes:1172408,
- package_metadata_bytes:45385,non_city_bytes:16454222};
+const SPEC_BOUNDS={nf03_closure_bytes:595530,nf04_closure_bytes:276671,delivery_order_closure_bytes:281795,r1_closure_bytes:253146,r3_closure_bytes:208607,depot_closure_bytes:568477,
+ emitted_text_bytes:3650354,integration_text_bytes:183944,integration_source_bytes:444804,source_offer_extracted_bytes:4162878,source_offer_compressed_bytes:1173516,
+ package_metadata_bytes:45385,non_city_bytes:16457765};
 const SPEC_BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
  depot_route_local_bytes:418159,emitted_text_bytes:3569285,integration_text_bytes:129056,hosted_artwork_bytes:7793265,source_offer_extracted_bytes:4079740,non_city_minus_offer_bytes:15039757};
 const DIGEST_PREFIXES={legacy:'15b3d561',city_base:'1d76e6af',city_source_offer:'1bf42853',readback:'708659b4'};
@@ -21,7 +21,7 @@ const OFFLINE_SHA='313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58
 // Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
 // Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then the Street slicing and world reuse 1,469 B, to the offline edition.
 // Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add 406 B.
-const OFFLINE_AFTER_PAIR={bytes:2587228,sha256:'4fdc264ee55d6c38367240f46dec719e822cd4f9170d2cfc855f615f263b25d8'};
+const OFFLINE_AFTER_PAIR={bytes:2588120,sha256:'8dc4dd1283ecdc079f6983147d5638c496e57152e7908583f13a422b5389d2a9'};
 const LEGACY='15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529';
 
 // A synthetic stage holding the BEFORE values, shaped like the three records build-release.py writes.

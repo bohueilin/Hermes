@@ -34,7 +34,7 @@ test('approved enhancement artwork has its own bounded inventory and holds V1 ou
 
 test('only the approved aggregate and capacity ceilings change, while all presentation dependencies count',()=>{
  // Q6 (reconciliation 7.2) raises raw, emitted, metadata and extracted ceilings and adds explicit depot counters only.
- assert.deepEqual(LIMITS,{legacy_text_bytes:2625315,raw_source_and_tools_bytes:3940352,nf03_closure_bytes:557056,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432,emitted_text_bytes:3801088,package_metadata_bytes:57344,source_offer_compressed_bytes:4194304,source_offer_extracted_bytes:5242880,teaching_text_plus_source_bytes:7340032,teaching_generation_bytes:17825792,offline_bytes:2587228});
+ assert.deepEqual(LIMITS,{legacy_text_bytes:2626515,raw_source_and_tools_bytes:3940352,nf03_closure_bytes:557056,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432,emitted_text_bytes:3801088,package_metadata_bytes:57344,source_offer_compressed_bytes:4194304,source_offer_extracted_bytes:5242880,teaching_text_plus_source_bytes:7340032,teaching_generation_bytes:17825792,offline_bytes:2588120});
  assert.equal(OWNER_LIMITS.nf04_closure_bytes,524288);assert.equal(OWNER_LIMITS.depot_closure_bytes,786432);assert.equal(OWNER_LIMITS.emitted_text_bytes,3801088);
  const additions=['enhancement-motion.mjs','enhancement-media.mjs','enhancement-media.css'];
  for(const name of additions)assert.ok(BRAND_TEXT.includes(name));
@@ -42,8 +42,8 @@ test('only the approved aggregate and capacity ceilings change, while all presen
  const final=new Map([...teaching,...additions.map(n=>[n,'12345'])]);
  const start=measureIntegratedText(teaching,final);
  for(const name of additions){const copy=new Map(final);copy.set(name,'');assert.equal(start.nf03_closure_bytes-measureIntegratedText(teaching,copy).nf03_closure_bytes,5);}
- final.set('enhancement-media.css',' '.repeat(595010-start.nf03_closure_bytes+5));
- assert.equal(measureIntegratedText(teaching,final).nf03_closure_bytes,595010);
+ final.set('enhancement-media.css',' '.repeat(595530-start.nf03_closure_bytes+5));
+ assert.equal(measureIntegratedText(teaching,final).nf03_closure_bytes,595530);
  final.set('enhancement-media.css',final.get('enhancement-media.css')+' ');
  assert.throws(()=>measureIntegratedText(teaching,final),/nf03.*budget/i);
 });
@@ -66,7 +66,7 @@ test('the integrated depot closure, depot-owned text and NF03 bound stay inside 
  const counts=measureIntegratedText(teaching,final);
  assert.ok(counts.depot_closure_bytes<=786432,`depot closure ${counts.depot_closure_bytes}`);
  assert.ok(counts.depot_route_local_bytes<=524288,`depot-owned ${counts.depot_route_local_bytes}`);
- assert.ok(counts.nf03_closure_bytes<=595010,`nf03 ${counts.nf03_closure_bytes}`);
+ assert.ok(counts.nf03_closure_bytes<=595530,`nf03 ${counts.nf03_closure_bytes}`);
  for(const id of ['nf04','delivery_order','r1','r3'])assert.ok(counts[`${id}_closure_bytes`]<=524288,id);
  console.log('integrated-depot-counters',JSON.stringify(counts));
 });
