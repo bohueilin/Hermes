@@ -92,6 +92,9 @@ test('confirmed defect: the followed AV detail never prints null, undefined or N
   lab.element.querySelectorAll('button').find(b=>b.textContent==='Compare route policies').click();await new Promise(resolve=>setTimeout(resolve,0));while(lab.getState().busy)await new Promise(resolve=>setTimeout(resolve,10));
   assert.equal(lab.element.querySelector('[aria-label="Inspect street AV"]').value,'AV-01');assert.equal(lab.getState().time,0);
   assert.match(lab.element.querySelector('.street-vehicle-detail').textContent,/At Financial District · 0 completed journeys/);clean('minute 0 after the comparison');
+  const rows=lab.element.querySelectorAll('.street-comparison tbody tr').map(r=>r.querySelectorAll('th,td').map(c=>c.textContent)),value=t=>Number(t.replaceAll(',','').match(/^[+-]?[\d.]+/)[0]);
+  assert.deepEqual(rows.slice(1,3).map(r=>r[0]),['Mean pickup wait, boarded riders','Mean passenger time, completed only']);
+  for(const [title,free,queue,change] of rows)assert.equal(value(change),Math.round((value(queue)-value(free))*10)/10,`${title}: Change is the shown difference`);
   lab.seek(600);clean('minute 10, passenger on board');lab.seek(0);clean('back at minute 0');
   lab.element.querySelector('.street-replay-variant').querySelectorAll('button')[1].click();clean('queue-aware replay at minute 0');
  }finally{lab?.destroy();restore();}

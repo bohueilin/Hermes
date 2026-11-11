@@ -190,6 +190,7 @@ test('every Fleet day count and percentage names its population',async()=>{
     assert.match(text,new RegExp(`Unserved${m.unserved_requests} / ${m.total_requests}Of all requests`));
     assert.match(text,new RegExp(`Mean over ${m.completed_visits} completed depot visits`));
     assert.match(text,new RegExp(`${m.censored_visits} of ${m.censored_visits+m.completed_visits} started depot visits unfinished`));
+    assert.ok(text.includes('Vehicle-hoursShare of 16 vehicle-hours'),'the share column names 8 vehicles × 2 hours');
     lab.destroy();
   }finally{restore();}
 });
