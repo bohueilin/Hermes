@@ -17,7 +17,7 @@ export function createHeroFilm({ filmUrl = FILM_URL, posterUrl = POSTER_URL, aut
     throw new Error('Poster must use local image data');
   }
   const poster = el('img', {
-    class: 'film-poster', src: posterUrl, width: 1280, height: 720,
+    class: 'film-poster', loading: 'lazy', src: posterUrl, width: 1280, height: 720,
     alt: 'An electric AV travels along a sunny waterfront beside a promenade.',
   });
   const element = el('div', { class: 'hero-film' }, poster);

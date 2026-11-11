@@ -23,6 +23,7 @@ const EVENT_WORDS=[['arrival',null,'arrives','arrive'],['complete','upload','fin
 function header(){
 const link=(text,href)=>el('a',{href,class:'studio-button'},text);
 return el('header',{class:'studio-header'},[
+el('a',{href:'#capacity-main',class:'studio-skip'},'Skip to lesson'),
 el('div',{class:'studio-brand'},[el('a',{href:'/#/overview',class:'studio-monogram','aria-label':'FleetLab home'},'F'),el('div',{},[el('strong',{},'FleetLab'),el('span',{},'by Hermes')])]),
 el('nav',{id:'studio-navigation','aria-label':'Main navigation'},[link('Home','/#/overview'),link('Explore','/#/catalog'),link('About & limits','/#/approach')]),
 ]);
@@ -46,7 +47,7 @@ const value=text=>card.available?text:'Not available';
 return el('article',{class:'capacity-card','data-case':card.case,'data-loaded':String(loaded)},[
 el('p',{class:'capacity-card-meta'},loaded?'Loaded and matched':'Published study summary'),
 el('h3',{},card.label),el('p',{class:'capacity-changed'},card.changed),
-el('dl',{},[el('dt',{},'Ready on time'),el('dd',{},value(`${card.on_time} of ${VISITS}`)),el('dt',{},'Missed targets'),el('dd',{},value(`${card.missed} (late ${card.late}, unfinished ${card.unfinished_due})`)),
+el('dl',{},[el('dt',{},'Ready on time'),el('dd',{},value(`${card.on_time} of ${VISITS}`)),el('dt',{},'Missed targets'),el('dd',{},value(`${card.missed} of ${VISITS} (late ${card.late}, unfinished ${card.unfinished_due})`)),
 el('dt',{},'Total lateness'),el('dd',{},card.lateness_text),el('dt',{},'Capacity used'),el('dd',{},card.capacity_text)]),
 ]);
 }
@@ -105,9 +106,9 @@ el('h3',{},'Not modeled, and what a real study would need'),el('dl',{},needs.fla
 function studyTable(manifest){
 const primary=manifest.cells.filter(c=>c.time_quantum_ms===P.quanta_ms[0]&&c.metrics);
 const repeat=id=>manifest.refinement?.[id]?(manifest.refinement[id].agrees?'agrees':'differs'):'Not available';
-const lateness=m=>m.final_lateness?`${minute(m.lateness_s)} min`:`At least ${minute(m.lateness_lower_bound_s)} min`;
+const lateness=m=>m.final_lateness?`${minute(m.lateness_s)} min`:`At least ${minute(m.lateness_lower_bound_s)} min; ${m.unfinished_due+m.pending} unfinished`;
 return table('All primary cells of the accepted study, one-second slots',['Workload','Capacity','Rule','Ready on time','Missed','Total lateness','Quarter-second repeat','Record digest'],
-primary.map(c=>[CAPACITY_REGIMES[c.regime].name,T[c.treatment].name,ruleName(c.rule),`${c.metrics.on_time} of ${VISITS}`,c.metrics.missed,lateness(c.metrics),repeat(c.cell_id),c.record_digest.slice(0,8)]));
+primary.map(c=>[CAPACITY_REGIMES[c.regime].name,T[c.treatment].name,ruleName(c.rule),`${c.metrics.on_time} of ${VISITS}`,`${c.metrics.missed} of ${VISITS}`,lateness(c.metrics),repeat(c.cell_id),c.record_digest.slice(0,8)]));
 }
 
 export function createCapacityPage({manifest,autoGuide=true,reducedMotion=()=>false,yieldPage=()=>new Promise(r=>setTimeout(r,0)),steps=capacityCellSteps}={}){
@@ -163,7 +164,7 @@ el('div',{class:'capacity-difference-actions'},[jumpAllocation,jumpReadiness]),f
 el('div',{class:'capacity-examples',role:'group','aria-label':'Example visits'},exampleButtons),exampleNote,
 detail('Every vehicle: outcomes and changes',[visitTable]),detail('Service timelines and exact average rates',[figures,spansBox])]);
 const loadedDetails=el('div',{class:'capacity-records'});
-const main=el('main',{class:'depot-capacity'},[
+const main=el('main',{id:'capacity-main',class:'depot-capacity',tabindex:'-1'},[
 el('nav',{class:'flow-breadcrumb','aria-label':'Breadcrumb'},[el('a',{href:'/#/catalog'},'Explore'),el('span',{'aria-hidden':'true'},'/'),el('span',{},'Network Flows'),el('span',{'aria-hidden':'true'},'/'),el('span',{'aria-current':'page'},'Scheduling or capacity?')]),
 el('section',{class:'capacity-hero'},[
 el('div',{class:'capacity-intro'},[

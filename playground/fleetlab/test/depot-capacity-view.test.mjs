@@ -31,10 +31,10 @@ test('cards read the accepted manifest: counts, lateness and capacity used',()=>
   assert.deepEqual(cards.map(c=>c.on_time),[3,3,9,3]);
   assert.deepEqual(cards.map(c=>c.missed),[9,9,3,9]);
   assert.deepEqual(cards.map(c=>c.lateness_text),['132.3 min','70 min','1.5 min','132.3 min']);
-  assert.deepEqual(cards.map(c=>c.capacity_text),['Uplink 57% used · site feed not needed','Uplink 57% used · site feed not needed','Uplink 28% used · site feed not needed','Uplink 57% used · site feed not needed']);
+  assert.deepEqual(cards.map(c=>c.capacity_text),['Uplink 57% of available bytes used · site feed not needed','Uplink 57% of available bytes used · site feed not needed','Uplink 28% of available bytes used · site feed not needed','Uplink 57% of available bytes used · site feed not needed']);
   for(const card of cards){const m=manifestCell(view.caseCells('data_heavy','capacity_departure_deadline').find(c=>c.case===card.case).cell_id).metrics;
     assert.deepEqual([card.on_time,card.missed,card.late,card.unfinished_due],[m.on_time,m.missed,m.late,m.unfinished_due]);}
-  assert.equal(view.cardsFor(CAPACITY_STUDY,'mixed','capacity_fifo')[3].capacity_text,'Uplink 57% used · site feed 22% used');
+  assert.equal(view.cardsFor(CAPACITY_STUDY,'mixed','capacity_fifo')[3].capacity_text,'Uplink 57% of available bytes used · site feed 22% of available energy used');
   const censored=structuredClone(CAPACITY_STUDY),cell=censored.cells.find(c=>c.cell_id==='mixed/base/capacity_equal_uplink/1000');
   Object.assign(cell.metrics,{final_lateness:false,lateness_s:null,lateness_lower_bound_s:7200,unfinished_due:2,pending:1});
   assert.equal(view.cardsFor(censored,'mixed','capacity_fifo')[0].lateness_text,'At least 120 min; 3 unfinished');

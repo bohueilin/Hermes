@@ -38,6 +38,14 @@ test("a highly compressed offer cannot hide an excessive extracted JSON size", (
   assert.throws(() => tool.createSourceArchive({ source: "\\".repeat(Math.ceil(tool.LIMITS.source_offer_extracted_bytes / 2) + 1) }), /extracted.*budget/i);
 });
 
+test("the archive length depends on the offered files, not the commit or tree ID", () => {
+  const offer = id => tool.createSourceArchive({ files: { "a.js": "export const a = 1;\n".repeat(50) },
+    source: { commit: id, tree: [...id].reverse().join("") } });
+  const zeros = offer("0".repeat(40)), real = offer("00d834fd3fd3cf66a7c772057bfa682c9aa875ae");
+  assert.equal(zeros.archive.length, real.archive.length);
+  assert.deepEqual(gunzipSync(real.archive), real.raw);
+});
+
 test("shared dependencies count in every closure and duplicate physical paths count separately", () => {
   assert.equal(typeof tool.measureRouteClosures, "function", "closure accounting is not implemented");
   const root = join(scratch, "tiny");

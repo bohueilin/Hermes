@@ -115,7 +115,7 @@ function caption(r,time,kinds){
     }).join('; ')+'.';
   }
   if(kinds.some(k=>k.kind==='LAST_READY')){
-    if(states.every(s=>s.vehicles.every(v=>v.ready)))return prefix+`Every vehicle is ready under every rule. ${time===r.scenario.horizon_s?'End of run. Final result':`Final result, unchanged through minute ${r.scenario.horizon_s/60}`}: `+r.arms.map(a=>`${lower(a.record.rule)} ${a.verification.metrics.on_time} of ${r.scenario.vehicles.length}${a.verification.metrics.lateness_lower_bound_s?` on time, ${a.verification.metrics.lateness_lower_bound_s/60} late minutes`:''}`).join('; ')+'.';
+    if(states.every(s=>s.vehicles.every(v=>v.ready)))return prefix+`Every vehicle is ready under every rule. ${time===r.scenario.horizon_s?'End of run. Final result':`Final result, unchanged through minute ${r.scenario.horizon_s/60}`}: `+r.arms.map(a=>`${lower(a.record.rule)} ${a.verification.metrics.on_time} of ${r.scenario.vehicles.length} on time${a.verification.metrics.lateness_lower_bound_s?`, ${a.verification.metrics.lateness_lower_bound_s/60} late minutes`:''}`).join('; ')+'.';
     return prefix+'End of run. '+grouped(states,s=>s.vehicles.filter(v=>!v.ready).map(v=>`Vehicle ${v.vehicle} is not ready.`).join(' ')||'Every vehicle is ready.');
   }
   const deadline=kinds.find(k=>k.kind==='DEADLINE');
@@ -173,13 +173,15 @@ export function outcomeHeadline(result){
   for(const a of arms){const n=a.verification.metrics.on_time;if(!groups.has(n))groups.set(n,[]);groups.get(n).push(a.record.rule);}
   const count=r.scenario.vehicles.length,highest=Math.max(...groups.keys()),least=Math.min(...arms.map(a=>a.verification.metrics.lateness_lower_bound_s));
   const leastRules=arms.filter(a=>a.verification.metrics.lateness_lower_bound_s===least).map(a=>a.record.rule);
-  if(highest===0)return `No rule gets a vehicle ready on time; ${join(leastRules.map(lower))} ${leastRules.length===1?'adds':'add'} the fewest late minutes (${least/60}).`;
+  // An unfinished visit keeps adding lateness, so a non-final total is only a lower bound.
+  const fewest=arms.every(a=>a.verification.metrics.final_lateness)?`the fewest late minutes (${least/60})`:`the fewest late minutes so far (at least ${least/60}; unfinished work adds more)`;
+  if(highest===0)return `No rule gets a vehicle ready on time; ${join(leastRules.map(lower))} ${leastRules.length===1?'adds':'add'} ${fewest}.`;
   const sorted=[...groups].sort(([a],[b])=>b-a),parts=sorted.map(([n,ids],i)=>{
     const plural=ids.length>1,verb=plural?'get':'gets',label=join(ids.map(lower));
     return label+' '+verb+(n===count?` ${count===2?'both':`all ${count}`} vehicles ready on time`:n===0?' none':` ${n} of ${count}${i===0?' vehicles ready on time':''}`);
   });
   let line=upper(parts.join('; '));
-  if(!leastRules.some(id=>groups.get(highest).includes(id)))line+=`, but ${join(leastRules.map(lower))} ${leastRules.length===1?'adds':'add'} the fewest late minutes (${least/60})`;
+  if(!leastRules.some(id=>groups.get(highest).includes(id)))line+=`, but ${join(leastRules.map(lower))} ${leastRules.length===1?'adds':'add'} ${fewest}`;
   return line+'.';
 }
 

@@ -29,7 +29,7 @@ make('power','More power','more_power',BASE_RULE,`Changed: site feed, ${kw(T.bas
 ];
 }
 
-const percent=(used,available)=>`${Math.round(100*used/available)}% used`;
+const percent=(used,available,what)=>`${Math.round(100*used/available)}% of available ${what} used`;
 /** Card models from manifest metrics only; a cell the manifest does not accept shows as not available, never as zero. */
 export function cardsFor(manifest,regime,altRule){
 const energy=Object.values(CAPACITY_REGIMES[regime].energy_j).some(j=>j>0);
@@ -38,7 +38,7 @@ const m=metricsOf(manifest,cell_id),u=m?.utilization;
 if(!m)return {case:c,label,changed,cell_id,available:false,on_time:null,missed:null,late:null,unfinished_due:null,lateness_text:'Not in the accepted study',capacity_text:'Not in the accepted study'};
 return {case:c,label,changed,cell_id,available:true,on_time:m.on_time,missed:m.missed,late:m.late,unfinished_due:m.unfinished_due,
 lateness_text:latenessText(m),
-capacity_text:`Uplink ${percent(u.uplink_bytes_served,u.uplink_bytes_available)} · site feed ${energy&&u.site_j_available?percent(u.site_j_served,u.site_j_available):'not needed'}`};
+capacity_text:`Uplink ${percent(u.uplink_bytes_served,u.uplink_bytes_available,'bytes')} · site feed ${energy&&u.site_j_available?percent(u.site_j_served,u.site_j_available,'energy'):'not needed'}`};
 });
 }
 

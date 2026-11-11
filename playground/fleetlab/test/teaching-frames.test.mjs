@@ -68,3 +68,11 @@ test('regional and launch lesson edits disclose changed setup and refresh actual
   app.studio.applyRoute('#/fleet-day?lesson=region-launch');const panel=app.studio.operations.launchPanel;assert.doesNotMatch(panel.element.querySelector('.teaching-frame').textContent,/Setup changed/);panel.chooseTemplate('peninsula');assert.match(panel.element.querySelector('.teaching-frame').textContent,/Setup changed from this lesson/);
  }finally{app.destroy();}}finally{restore();}
 });
+
+test('frame parts sit one heading level below the frame title',async()=>{
+ const {frameView}=await module(),restore=installFakeDom();
+ try{
+  for(const [heading,part] of [['h1','H2'],[undefined,'H3']]){const frame=frameView(null,heading?{heading}:{});
+   assert.deepEqual(frame.querySelectorAll('[data-part]').map(p=>p.firstChild.tagName),[part,part,part]);}
+ }finally{restore();}
+});

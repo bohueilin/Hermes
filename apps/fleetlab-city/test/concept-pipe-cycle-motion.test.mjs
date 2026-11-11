@@ -44,7 +44,7 @@ test('fleet primer has a complete nominal cycle with conditional holds outside i
  const f=document.querySelector('[data-concept="fleet"] figure');
  assert.equal(f.querySelectorAll('svg').length,1);
  assert.deepEqual([...f.querySelectorAll('.concept-cycle-steps strong')].map(n=>n.textContent),['Pickup','Passenger trip','Depot','Redispatch']);
- assert.match(f.querySelector('.concept-cycle-conditions').textContent,/Conditional holds/);
+ assert.match(f.querySelector('.concept-cycle-conditions').textContent,/Conditional holds/);assert.equal(f.querySelector('.concept-cycle-conditions').getAttribute('aria-label'),'Conditional holds');
  assert.equal(f.querySelector('.concept-cycle-steps .concept-cycle-conditions'),null);
  assert.equal(f.querySelector('figcaption').textContent,'Concept illustration · not simulation output');
  assert.equal(f.querySelectorAll('video,img').length,0);

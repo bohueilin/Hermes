@@ -80,3 +80,8 @@ test('hidden, detached and navigated explainers release active observers and fra
   x.document.body.append(x.root);x.root.hidden=false;x.mutate();assert.equal(x.frames.pending,0);
  }
 });
+test('a caller can set the explainer heading level so the page outline skips none',()=>{
+ const {document}=createFakeDom();
+ assert.equal(createMethodologyExplainer('deadhead',document).querySelector('h3').textContent,'The distance without a rider');
+ assert.equal(createMethodologyExplainer('deadhead',document,'h2').querySelector('h2').textContent,'The distance without a rider');
+});

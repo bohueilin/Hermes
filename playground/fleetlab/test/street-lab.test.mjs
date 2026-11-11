@@ -77,9 +77,11 @@ test('navigation pause while a run is pending prevents hidden autoplay',async()=
   assert.ok(lab.getState().run);assert.equal(lab.getState().playing,false);
  }finally{lab?.destroy();restore();}
 });
-test('Street summary focus preserves the user scroll position after Run',async()=>{const restore=installFakeDom();let lab;try{
- lab=createStreetLab();lab.setConfig({duration_minutes:10,background_per_hour:0});const heading=lab.element.querySelector('.street-results h2'),focus=heading.focus.bind(heading);let options;
- heading.focus=value=>{options=value;focus(value);};await lab.run();assert.deepEqual(options,{preventScroll:true});
+test('Street summary focus brings the focused heading into view after Run',async()=>{const restore=installFakeDom();let lab;try{
+ lab=createStreetLab();lab.setConfig({duration_minutes:10,background_per_hour:0});const heading=lab.element.querySelector('.street-results h2'),focus=heading.focus.bind(heading);let options,scrolled;
+ heading.focus=value=>{options=value;focus(value);};heading.scrollIntoView=value=>{scrolled=value;};await lab.run();
+ assert.deepEqual(options,{preventScroll:true});assert.deepEqual(scrolled,{block:'start',behavior:'instant'});
+ assert.equal(lab.element.querySelector('aside.street-settings').getAttribute('aria-label'),'Street scenario settings');
 }finally{lab?.destroy();restore();}});
 test('confirmed defect: the followed AV detail never prints null, undefined or NaN before, during or after a route comparison',async()=>{
  const restore=installFakeDom();let lab;try{

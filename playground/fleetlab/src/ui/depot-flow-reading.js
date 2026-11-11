@@ -57,9 +57,9 @@ export const FLOW_GLOSSARY=Object.freeze({
  authority:'NOT_EVIDENCE: a constructed teaching run, without authentication or authority to change an operation.',
 });
 export function outcomesView(result,previous){
- const ids=result.scenario.vehicles.map(v=>v.id),changes=previous?.changes??[];
- const fields=a=>{const m=a.verification.metrics;return [`${m.on_time} of ${ids.length}`,String(m.late),`${m.unfinished_due} / ${m.pending}`,`${m.final_lateness?'':'At least '}${minute(m.lateness_lower_bound_s)}`,...a.verification.visits.map(v=>{const was=changes.find(c=>c.rule===a.record.rule&&c.vehicle===v.vehicle);return `${minute(v.ready_s)} · ${outcomeLabel[v.outcome]}${was?` (was ${minute(was.previous_ready_s)})`:''}`;})];};
- const heads=['On time','Late','Unfinished / pending','Late minutes',...ids.map(id=>`Vehicle ${id} ready`)];
+ const vehicles=result.scenario.vehicles,n=vehicles.length,changes=previous?.changes??[];
+ const fields=a=>{const m=a.verification.metrics;return [`${m.on_time} of ${n}`,`${m.late} of ${n}`,`${m.unfinished_due} / ${m.pending}`,m.final_lateness?`${minute(m.lateness_lower_bound_s)}, final total`:`At least ${minute(m.lateness_lower_bound_s)}, lower bound (work unfinished)`,...a.verification.visits.map(v=>{const was=changes.find(c=>c.rule===a.record.rule&&c.vehicle===v.vehicle);return `${minute(v.ready_s)} · ${outcomeLabel[v.outcome]}${was?` (was ${minute(was.previous_ready_s)})`:''}`;})];};
+ const heads=['Ready on time','Ready late',`Unfinished / pending, of ${n}`,'Late minutes, all vehicles',...vehicles.map(v=>`Vehicle ${v.id} ready · deadline ${minute(v.deadline_s)}`)];
  return el('section',{'aria-label':'End-of-run outcomes','data-flow-outcomes':''},[el('h3',{},'End-of-run outcomes'),table('Completed comparison · whole observation period',['Upload rule',...heads],result.arms.map(a=>[ruleName(a.record.rule),...fields(a)]),{class:'flow-table flow-outcomes-wide'}),el('div',{class:'flow-outcomes-phone'},result.arms.map(a=>el('article',{},[el('h4',{},ruleName(a.record.rule)),el('dl',{},fields(a).flatMap((v,i)=>[el('dt',{},heads[i]),el('dd',{},v)]))])))]);
 }
 export function boundView(result){

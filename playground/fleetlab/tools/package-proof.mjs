@@ -11,7 +11,7 @@ import { constants, closeSync, fstatSync, lstatSync, mkdirSync, openSync,
   readSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { gzipSync } from "node:zlib";
+import { constants as zlib, crc32, deflateRawSync } from "node:zlib";
 import { buildHtml, buildSite, checkSitePath, findRepositoryRoot, moduleGraph } from "./pack.mjs";
 import { checkSite, labelsFromContracts } from "./check-dist.mjs";
 import { DELIVERY_RELEASE, DELIVERY_FILES, DELIVERY_ENTRIES, measureSiteOwnership, measureIntegratedText, lessonNavigation } from "./software-delivery-package.mjs";
@@ -264,11 +264,19 @@ function prepare(playground, sourceCommit, development) {
   return { playground, captured, identity, site, offline };
 }
 
-/** JSON offers carry data only, with independent compressed and extracted byte limits. */
+/** JSON offers carry data only, with independent compressed and extracted byte limits.
+ * The commit-bound "source" member is a stored (uncompressed) deflate block, so the archive's
+ * length depends on the offered files only, never on the commit or tree ID. */
 export function createSourceArchive(value) {
   const raw = Buffer.from(canonical(value) + "\n");
   if (raw.length > LIMITS.source_offer_extracted_bytes) fail("source offer extracted byte budget exceeded");
-  const archive = gzipSync(raw, { level: 9 });
+  const bound = Buffer.from(`"source":${canonical(value.source)}`), at = raw.indexOf(bound), n = bound.length;
+  if (at < 0 || n > 0xffff) fail("source offer identity is not storable");
+  const trailer = Buffer.alloc(8); trailer.writeUInt32LE(crc32(raw)); trailer.writeUInt32LE(raw.length, 4);
+  const archive = Buffer.concat([Buffer.from([0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 2, 255]),
+    deflateRawSync(raw.subarray(0, at), { level: 9, finishFlush: zlib.Z_FULL_FLUSH }),
+    Buffer.from([0, n & 255, n >> 8, ~n & 255, (~n >> 8) & 255]), bound,
+    deflateRawSync(raw.subarray(at + n), { level: 9 }), trailer]);
   if (archive.length > LIMITS.source_offer_compressed_bytes) fail("source offer compressed byte budget exceeded");
   return { raw, archive };
 }

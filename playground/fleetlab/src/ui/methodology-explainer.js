@@ -5,7 +5,7 @@ const COPY={
  deadhead:['The distance without a rider','Rebalancing is the art of shrinking the hollow loops.','Schematic illustration, not Waymo or R1 output: ten circuits of 10 distance units each; four circuits and half of a fifth are empty. That is 45 empty units out of 100 total, or 45%. Empty distance includes pickup travel and repositioning. Better rider coverage may require more empty travel; compare both.']
 };
 const clamp=n=>Math.max(0,Math.min(1,n));
-export function createMethodologyExplainer(kind,doc=document){
+export function createMethodologyExplainer(kind,doc=document,heading='h3'){
  if(!Object.hasOwn(COPY,kind))throw new Error('Unknown explainer');
  const make=(tag,attrs={},text='',svg=false)=>{const n=svg?doc.createElementNS('http://www.w3.org/2000/svg',tag):doc.createElement(tag);for(const [k,v]of Object.entries(attrs))setAttr(n,k,v);if(text)n.textContent=text;return n;};
  const root=make('section',{class:'methodology-explainer','data-explainer-kind':kind,'aria-label':COPY[kind][0]}),svg=make('svg',{class:'explainer-stage',viewBox:'0 0 600 240','aria-hidden':'true',focusable:'false'},'',true);
@@ -13,7 +13,7 @@ export function createMethodologyExplainer(kind,doc=document){
  const rect=(x,y,width,height,cls,extra={})=>shape('rect',{x,y,width,height,rx:6,class:cls,...extra});
  const label=(x,y,text,cls='explainer-label',extra={})=>shape('text',{x,y,class:cls,...extra},text);
  const controls=make('div',{class:'explainer-controls'}),replay=make('button',{type:'button','data-explainer-replay':''},'Replay'),pause=make('button',{type:'button','data-explainer-pause':''},'Pause'),status=make('span',{class:'explainer-status',role:'status'});
- controls.append(replay,pause,status);root.append(make('p',{class:'explainer-kicker'},'Illustration · not simulation output'),make('h3',{},COPY[kind][0]),svg,make('p',{class:'explainer-caption'},COPY[kind][1]),make('p',{class:'explainer-equivalent'},COPY[kind][2]),controls);
+ controls.append(replay,pause,status);root.append(make('p',{class:'explainer-kicker'},'Illustration · not simulation output'),make(heading,{},COPY[kind][0]),svg,make('p',{class:'explainer-caption'},COPY[kind][1]),make('p',{class:'explainer-equivalent'},COPY[kind][2]),controls);
  let draw;
  if(kind==='paired'){
  rect(220,8,160,40,'explainer-track');label(300,35,'Same seed S','explainer-label',{'text-anchor':'middle'});

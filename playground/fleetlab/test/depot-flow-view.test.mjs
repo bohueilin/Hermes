@@ -93,7 +93,7 @@ test('default captions follow observed states, name affected rules, and keep the
     'Minute 6. Vehicle A reaches its battery target under every rule; the upload rule does not change charging here. Vehicle A is still not ready. Upload received by Vehicle A: first come, first served 45 of 75 GB; equal uplink share 37.5 of 75 GB; departure deadline first 37.5 of 75 GB.',
     "Minute 10. First come, first served starts Vehicle B's upload, 5 minutes after B's departure deadline; under that rule Vehicle A has all 75 GB and its charge but is not ready until its 2-minute post-upload step ends. Equal uplink share and departure deadline first: Vehicle A has 67.5 of 75 GB.",
     'Minute 12. First come, first served makes Vehicle A ready; its post-upload step finished last. Equal uplink share and departure deadline first: Vehicle A is in its post-upload step.',
-    'Minute 13. Every vehicle is ready under every rule. Final result, unchanged through minute 15: first come, first served 1 of 2 on time, 8 late minutes; equal uplink share 2 of 2; departure deadline first 2 of 2.',
+    'Minute 13. Every vehicle is ready under every rule. Final result, unchanged through minute 15: first come, first served 1 of 2 on time, 8 late minutes; equal uplink share 2 of 2 on time; departure deadline first 2 of 2 on time.',
   ]);
   assert.equal(view.guidedMoments(result({b_gb:45})).find(m=>m.time_s===300).caption,"Minute 5. Vehicle B's departure deadline. Vehicle B is not ready under any rule; its earliest possible time is minute 8, even with the whole uplink to itself.");
 });
@@ -105,6 +105,13 @@ test('headlines group actual on-time counts and separate the late-minute tradeof
     [{b_gb:45},'First come, first served gets 1 of 2 vehicles ready on time; equal uplink share and departure deadline first get none, but departure deadline first adds the fewest late minutes (6).'],
     [{b_gb:45,uplink_gbps:0.5},'No rule gets a vehicle ready on time; departure deadline first adds the fewest late minutes (28).'],
   ])assert.equal(view.outcomeHeadline(result(options)),want);
+});
+
+test('a headline names an unfinished late-minute total as a lower bound',()=>{
+  const scenario=flowScenario({b_gb:45,uplink_gbps:0.5});scenario.horizon_s=900;
+  const arms=['nf_fifo','nf_equal_uplink','nf_departure_deadline'].map(rule=>{const record=simulateFlow(scenario,rule);return {record,verification:verifyFlow(record)};});
+  assert.ok(arms.some(a=>!a.verification.metrics.final_lateness),'the fixture leaves work unfinished');
+  assert.match(view.outcomeHeadline({...result({b_gb:45,uplink_gbps:0.5}),scenario,arms}),/the fewest late minutes so far \(at least \d+(\.\d+)?; unfinished work adds more\)\.$/);
 });
 
 test('one-change comparisons count six ready cells and explain maximum and unchanged outcomes',()=>{

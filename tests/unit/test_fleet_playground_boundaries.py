@@ -313,6 +313,14 @@ _REVIEWED_CI_NODE_JOB = (
     b"\n"
     b"      - name: FleetLab traffic suite\n"
     b'        run: node --test "tools/fleetlab-traffic/test/*.test.mjs"\n'
+    b"\n"
+    b"      - name: FleetLab City Python suite\n"
+    b"        run: |\n"
+    b'          python -m venv "$RUNNER_TEMP/fleetlab-city"\n'
+    b'          "$RUNNER_TEMP/fleetlab-city/bin/python" -m pip install --require-hashes'
+    b" -r apps/fleetlab-city/requirements.lock.txt\n"
+    b'          "$RUNNER_TEMP/fleetlab-city/bin/python" -B -m unittest discover'
+    b" -s apps/fleetlab-city/tests -q\n"
 )
 _REVIEWED_DEV_EXTRA = (
     b'    "ruff>=0.11,<1",\n]\nworkbench = [\n',

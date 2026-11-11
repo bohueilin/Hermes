@@ -58,6 +58,8 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 - **Media.** Never use the reserved eighth enhancement slot, and never touch A2 or the held Fleet day film. Settled art verdicts stay settled (October 26 rules).
 - **Honesty.** Record only checks that actually ran, with their output, and name what was not checked.
 - **Website date rule (always applies).** Whenever a release goes live, the website footer date must be the exact date it goes live: `apps/fleetlab-city/hosted/integration.mjs` (studio pages), `apps/fleetlab-city/hosted/brand.mjs` (City Explorer and Depot Readiness) and the assertion in `apps/fleetlab-city/test/structural-shell.test.mjs`, with the exact byte ceilings re-measured if the date string's length changes. Never ship a release with a stale footer date. If the upload slips to a later day, change the date and rebuild the stage before uploading. (Owner, 2026-11-10.)
+- **Pause scope rule (always applies).** The global "Pause visual motion" control stops all decorative and ambient motion and the lesson videos. Playback a visitor starts (the guided walkthroughs, snapshot stepping, and Fleet day and Street lab replays) is controlled by its own transport buttons, and the global Pause does not stop it. (Owner, 2026-11-11.)
+- **Post-run focus rule (always applies).** Focus moved by code after a run or comparison must land on an element that is visible in the viewport: either scroll the focused heading into view, as Fleet day and Street lab do, or leave focus on the visible control. (Owner, 2026-11-11.)
 
 ### 5. How to change the site safely
 
@@ -79,7 +81,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 4. **Patterns new since November 4 that a change must keep:**
    - The studio is decorated in the task that mounts it: the hosted `boot.js` imports `brand.mjs`.
    - Static headers get their final box from the first paint.
-   - Images under a hidden route stay lazy until the route shows.
+   - Images under a hidden route stay lazy until the route shows. Every image is created with `loading` set before `src`: `lazy`, plus `data-eager` for one that should load eagerly, which `syncRouteImages` turns into `loading="eager"` once its route shows. WebKit takes the lazy-loading decision the moment `src` is set, so an image given `src` first is fetched even on a hidden route.
    - On static pages, what follows a hosted insertion stays hidden until it lands, with a 3 s failsafe.
    - A new insertion or image that breaks these patterns brings the layout shift and the transfer back.
 5. **Teaching-client files.** The release integrator (`integrate-site.py`) only lets the teaching-client files it declares differ from the preserved legacy site, and the declared set must equal the changed set. A change to any other Playground model or UI file stops the build ("undeclared teaching client change") until it is declared there.
@@ -93,7 +95,8 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
    - Measure only on a committed, clean tree: an uncommitted tree reads the bound files 9 B low.
    - Write the exact values, amend, rebuild, and repeat until re-writing the commit's own measurement changes nothing. Stopping at "passes" leaves a byte or two of spare.
    - Update every copy. The list is in the November 10 section's Bytes table; `capacity-site.test.mjs` writes the Offline pin with numeric separators, so search both spellings.
-8. **CI** (`.github/workflows/ci.yml`, on `macos-26`) runs ruff, pytest without the local fixtures, and the three Node suites.
+   - The compressed source offer no longer varies with the commit. Since the 2026-11-11 numbers wave, `createSourceArchive` in `playground/fleetlab/tools/package-proof.mjs` writes the commit-bound `source` member (commit, tree, state) as a stored, uncompressed deflate block, so the archive's length depends on the offered files only. Before, each amend was a fresh draw of a few bytes, and the loop took 12 to 14 rounds.
+8. **CI** (`.github/workflows/ci.yml`, on `macos-26`) runs ruff, pytest without the local fixtures, the three Node suites and, since the 2026-11-11 numbers wave, the City Python suite in its own venv installed from `apps/fleetlab-city/requirements.lock.txt` with `--require-hashes`. The boundary test R6 pins the workflow to its reviewed bytes, so a CI change also changes `_REVIEWED_CI_NODE_JOB` in `tests/unit/test_fleet_playground_boundaries.py`.
    - The runner renders frames slowly. A browser test must wait for frame-driven state (a viewport observer, an animation's `ready` point, a media-query change) rather than read it after a fixed short delay. `concept-pipe-cycle-browser.test.mjs` shows the pattern.
    - A job that gets no runner is cancelled with zero steps. That is not a pass: re-run it.
 9. **Release.**
@@ -103,7 +106,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
    - The agent then runs the full readback and the header check on both hosts, writes the receipt and the compact public record with `record-release.mjs`, and updates this file.
    - Finally, `main` is reconciled through a pull request. The November 2 section gives the full path; the November 10 section shows the latest run.
 
-### 6. Open before new design work (refreshed 2026-11-10)
+### 6. Open before new design work (refreshed 2026-11-11)
 
 The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`, live since 2026-11-11 as `00d834f`) settled most items. Its report is kept privately with the release evidence.
 
@@ -115,23 +118,30 @@ The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`, live since 2
 - **FL-A4 priority below 768 px:** kept as built (owner ruling): eager and high priority from 768 px, lazy and low below.
 - **Defect (c), D6:** fixed. Before its study arrives, Rebalancing reads "No result yet" instead of "Recorded policy · after decision" and "0 min". Dispatch no longer draws an empty takeaway box. Both have regression tests.
 - **D1, the depot "Deeper experiment" eyebrow:** closed as an accepted residual. Earlier reviews declined it, and nothing later replaced it. If it is wanted later, rewording the existing eyebrow to "DEEPER EXPERIMENT · STAGE 1" measured −2 B on the depot route-local figure.
-- **R13, Delivery PARTIAL:** verified as bookkeeping, not a defect. The two required copy edits target text that does not exist in the source: there is no "Specification notation" string, and the fleet-intake controls have no "steps of" text. The power (24 to 56) and ports (16 to 28) inputs work. Closing it needs the owner to drop the two items from the required set.
+- **R13, Delivery PARTIAL:** closed as bookkeeping, not a defect. The two required copy edits targeted text that does not exist in the source, so both items are dropped from the required set and must not reappear on an open list: `specification.notation` (there is no "Specification notation" string) and the `fleet-intake` power and ports controls (they have no "steps of" text; the power input, 24 to 56, and the ports input, 16 to 28, work). (Owner, 2026-11-11.)
+- **City Explorer generation `1f560fc7` to `f3adaa72` in `00d834f`:** expected, not a City change. The City base (`city-base-refresh-20261108b/base`) is unchanged; `build-release.py` re-brands it with the release's hosted shell, which carried the Nov 11th footer date and the updated header, and with the release's source commit. Each release therefore gets a new generation hash.
 - **Workbench leftovers:** none remain. The tile-swap files went with the 2026-11-03 reorganization.
 - **Accessibility fixes:**
   - after a run, Fleet day brings the focused "Result summary" heading into view;
   - the studio's phone menu closes on Escape and returns focus to Menu, as the static pages' menu already did;
   - on the static pages, `main` takes focus from the skip link.
 
+**Closed in the 2026-11-11 numbers and WebKit wave** (branch `claude/fleetlab-numbers-webkit-20261111`; a candidate until it goes live):
+- **Numbers reconciliation, F01 to F04.** Every count and percentage on the four pages now names its population:
+  - Depot flow lab (`#/depot-flow-lab`): the outcomes table shows each vehicle's deadline in its "ready" column header beside the on-time verdict, counts read "n of N", and the late-minute cell reads either "final total" or "At least …, lower bound (work unfinished)". The headline calls a non-final total "the fewest late minutes so far (at least …)", and the final-result sentence now says "on time" after every count. Depot Readiness already labelled both ("x of d due by end", "at least … (more may follow)") and is unchanged.
+  - Fleet day: completion is "% of all N requests"; Unserved reads "n / N, of all requests"; depot time is the mean "over N completed depot visits"; unfinished visits read "n of N started depot visits"; the activity table's last column is "Share of vehicle-hours"; the vehicle-mix and depot-count comparisons name trips "of requests" and means over completed trips or visits.
+  - Street lab: the policy comparison names "Completed journeys, of N requests" and "Requests waiting / in progress at horizon".
+  - Capacity: "Missed" reads "n of N"; capacity reads "% of available bytes used" and "% of available energy used"; a non-final lateness names its unfinished visits.
+- **Pause scope:** kept as built and codified as the Pause scope rule in §4.
+- **Street lab focus after a run:** fixed under the post-run focus rule in §4. The focused "Result summary" heading is scrolled into view, as on Fleet day.
+- **Header focus order at phone width:** fixed. Below 768 px both headers now show the logo, Menu, the opened navigation and Pause in that order, which is their Tab order (CSS `order` only; the desktop header is unchanged).
+- **Minor accessibility gaps:** fixed. Lesson-frame part headings sit one level below the frame title (h1 then h2), Rebalancing's explainer heading is an h2, the Fleet day "Conditional holds", Street lab settings and hub limits panels are named landmarks, and each Home "Open setup →" link names its lesson. The wave's own audit also found that the Capacity lesson had no skip link (the 2026-11-10 audit had not covered it); it now has "Skip to lesson" as its first Tab stop.
+- **Safari and WebKit image loading:** fixed. Images get `loading` before `src` (`visitor.mjs`, `brand.mjs`, `enhancement-media.mjs`, and the film poster in `hero-film.js`), so WebKit no longer fetches the hidden routes' images: 11 to 22 per studio route before, 0 after, in WebKit 26.6; Chrome 157 and Firefox 155 stay at 0. The A2 figure keeps its 624 bytes and its attributes and values, but `loading` and `fetchpriority` now come before `src`, so its golden hash in `a2-golden.test.mjs` is re-pinned to `39d136f5…`.
+- **CI:** the City Python suite runs in CI (§5 item 8).
+
 **Still open (owner decisions):**
-- **Pause scope (hosted pause unification).** The global Pause stops all hosted motion and the lesson videos. It does not stop playback a visitor started: the guides and snapshot stepping on Capacity, Software delivery, Delivery order, Rebalancing and Dispatch. Decide whether it should; a fix sketch is in the wave's report.
-- **Street lab focus after a run.** Focus moves to the "Result summary" heading, and the page deliberately keeps the visitor's scroll position (both pinned by tests), so the focused heading is off screen. Choose between scrolling to it and keeping the position with focus left on Run.
-- **Header focus order at phone width.** Tab goes logo, Menu, Pause, while the visual order is logo, Pause, Menu (CSS `order`). Aligning them means moving a control on screen.
-- **Minor accessibility gaps:**
-  - skipped heading levels on Street lab and on Rebalancing's explainer (h1 to h3);
-  - unnamed side-panel landmarks on Fleet day, Street lab and the hub;
-  - repeated "Open setup →" link text on Home.
-- **Safari and WebKit image loading.** WebKit fetches the hidden routes' images, because the route-scoped deferral relies on the lazy-load timing of Chromium and Firefox. A fix sets `loading` before `src` when an image is created.
-- **CI.** Whether to require the CI checks on `main` (no branch protection), and whether to add the City Python suite and a stage build.
+- **Branch protection on `main`.** Requiring the CI checks before a merge is a repository setting for the owner; the command is in the wave's report.
+- **A stage build in CI.** CI still never builds a stage; the stage check runs locally before each merge request.
 
 **Accepted as is:**
 - Mobile `/#/catalog` LCP 10.06 s live, above its 7.8 s target (owner, 2026-11-10). No JavaScript tile-holding and no new artwork.

@@ -10,6 +10,7 @@ export function node(doc,tag,attrs={},children=[],namespace=null){
  return n;
 }
 // A hidden studio route fetches no image: its eager images wait as lazy, marked data-eager, until the route is shown.
+// WebKit takes the lazy-load decision when src is set, so an image gets loading (lazy, plus data-eager) before src.
 export function syncRouteImages(doc){
  for(const img of doc.querySelectorAll('img:not([loading="lazy"])'))if(img.closest('[hidden]')){img.setAttribute('data-eager','');img.setAttribute('loading','lazy');}
  for(const img of doc.querySelectorAll('img[data-eager]'))if(!img.closest('[hidden]')){img.removeAttribute('data-eager');img.setAttribute('loading','eager');}
@@ -40,7 +41,7 @@ if(teaching&&!fieldObservers.has(teaching)){
 }
 export function decorateVisitors(doc=document){
 const el=(...args)=>node(doc,...args);
-const diagram=(file,alt)=>el('figure',{class:'visitor-diagram'},[el('img',{src:'/diagrams/'+file,alt,width:'2048',height:'1152',decoding:'async'}),el('figcaption',{},'Concept illustration · not simulation output')]);
+const diagram=(file,alt)=>el('figure',{class:'visitor-diagram'},[el('img',{'data-eager':'',loading:'lazy',src:'/diagrams/'+file,alt,width:'2048',height:'1152',decoding:'async'}),el('figcaption',{},'Concept illustration · not simulation output')]);
 const flow=doc.querySelector('.flow-hero');
 if(flow&&!flow.hasAttribute('data-diagram-observed')){
  flow.setAttribute('data-diagram-observed','');
@@ -48,10 +49,10 @@ if(flow&&!flow.hasAttribute('data-diagram-observed')){
  draw();new MutationObserver(draw).observe(flow,{childList:true,subtree:true});
 }
 const dispatch=doc.querySelector('.bench>#chapter-copy');
-if(dispatch&&!doc.querySelector('.dispatch-concept')){const figure=diagram('D-05-opportunity-cost.webp','Dispatching the car now strands the next rider.');figure.classList.add('dispatch-concept');figure.querySelector('img').setAttribute('loading','lazy');dispatch.parentNode.insertBefore(figure,dispatch.nextSibling);}
+if(dispatch&&!doc.querySelector('.dispatch-concept')){const figure=diagram('D-05-opportunity-cost.webp','Dispatching the car now strands the next rider.');figure.classList.add('dispatch-concept');figure.querySelector('img').removeAttribute('data-eager');dispatch.parentNode.insertBefore(figure,dispatch.nextSibling);}
 const staffing=doc.querySelector('#staffing-help')?.parentNode;
-if(staffing&&!staffing.querySelector('.visitor-diagram')){staffing.classList.add('visitor-staffing');const figure=diagram('D-03-staffing-queue.webp','Pods queued at service bays; one bay works, one waits for a worker.');figure.querySelector('img').setAttribute('loading','lazy');staffing.insertBefore(figure,staffing.firstChild.nextSibling);}
-const art=(file,alt='',className='visitor-tile-art')=>el('img',{src:'/tiles/'+file,alt,class:className,width:'1600',height:'1600',loading:'lazy',decoding:'async'});
+if(staffing&&!staffing.querySelector('.visitor-diagram')){staffing.classList.add('visitor-staffing');const figure=diagram('D-03-staffing-queue.webp','Pods queued at service bays; one bay works, one waits for a worker.');figure.querySelector('img').removeAttribute('data-eager');staffing.insertBefore(figure,staffing.firstChild.nextSibling);}
+const art=(file,alt='',className='visitor-tile-art')=>el('img',{loading:'lazy',src:'/tiles/'+file,alt,class:className,width:'1600',height:'1600',decoding:'async'});
 const text=(selector,value)=>{const n=doc.querySelector(selector);if(n)n.textContent=value;};
 const tour=()=>el('section',{class:'visitor-tour'},[el('h2',{},'The 15-minute tour'),el('p',{},'After the 3-minute starter, take five minutes per stop.'),el('ol',{},[['Walkthrough','/#/walkthrough','You leave knowing how to change one assumption and read the result.'],['Dispatch lesson','/network-flows/dispatch/','You leave knowing why the nearest available car can carry an opportunity cost.'],['City Explorer notebook','/city-explorer/#compare','You leave knowing how a second depot changes this recorded synthetic study.']].map(([title,href,outcome])=>el('li',{},[el('a',{href},title+' · 5 min →'),el('p',{},outcome)]))),el('p',{class:'visitor-tour-finish'},'Finish: what would you test on Monday, which population would you count, and what evidence would change your mind?')]);
 text('#limits-view a[href="/city-explorer/sources/"]','Visit the map sources page for databases, captured sources, code and licenses →');
@@ -101,7 +102,7 @@ if(home&&!doc.getElementById('visitor-purpose')){
    ['experiments','UC-08a','More bays may leave rider wait unchanged','UC-08a adds two SF-1 bays; rider wait stays within the declared margin.','20 paired seeds; a local capacity change is not a fleet-wide gain.'],
    ['experiments','L2a','A guardrail can change the decision','L2a and L2b use the same arms. Adding the bay-wait guardrail changes RUN_MORE_EXPERIMENTS to HOLD.','Primary result remains INCONCLUSIVE; no deployment authority.','L2b'],
   ].map(([route,id,title,finding,limit,also])=>el('article',{class:'start-card'},[
-   el('h3',{},title),el('p',{},finding),el('p',{},limit),...[id,also].filter(Boolean).map(lesson=>el('a',{class:'studio-button',href:`/#/${route}?lesson=${lesson}`},also?`Open ${lesson} →`:'Open setup →')),
+   el('h3',{},title),el('p',{},finding),el('p',{},limit),...[id,also].filter(Boolean).map(lesson=>el('a',{class:'studio-button',href:`/#/${route}?lesson=${lesson}`,...also?{}:{'aria-label':`Open setup: ${title}`}},also?`Open ${lesson} →`:'Open setup →')),
   ]))),
  ]);
  home.insertBefore(insights,home.querySelector('.home-learning-path'));
@@ -121,7 +122,7 @@ if(catalog&&!doc.getElementById('visitor-families')){
   const b=el('button',{type:'button',class:'visitor-family','data-family':f.id,'aria-pressed':'false','aria-controls':'visitor-library'},[
    el('span',{class:'visitor-family-title'},f.title),el('span',{class:'visitor-family-question'},f.question),art(f.tile),el('span',{class:'visitor-family-count'},`${f.lessons.length} lessons`),
   ]);
-  if(index<3)b.querySelector('img').setAttribute('loading','eager');
+  if(index<3)b.querySelector('img').setAttribute('data-eager','');
   b.addEventListener('click',()=>{
    const wasSelected=b.getAttribute('aria-pressed')==='true';select(wasSelected?null:f);
    results.open=true;
@@ -190,7 +191,7 @@ if(welcome&&!doc.getElementById('visitor-city-path')){
  welcome.insertBefore(ribbon,comparison?.nextSibling??null);
 }
 for(const hero of doc.querySelectorAll('.visitor-purpose,.ops-intro,.street-intro,.catalog-intro,.approach-intro'))hero.classList.add('lab-hero');
-for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.insertBefore(link,hero.querySelector('.hero-lede')?.nextSibling??null);}const image=art(file);image.setAttribute('loading','eager');image.setAttribute('fetchpriority','high');hero.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));if(selector==='.street-intro'){const copy=el('div',{class:'visitor-street-copy'});for(const child of [...hero.children])if(!child.classList.contains('visitor-hero-art'))copy.appendChild(child);hero.insertBefore(copy,hero.firstChild);}}}
+for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.insertBefore(link,hero.querySelector('.hero-lede')?.nextSibling??null);}const image=art(file);image.setAttribute('data-eager','');image.setAttribute('fetchpriority','high');hero.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));if(selector==='.street-intro'){const copy=el('div',{class:'visitor-street-copy'});for(const child of [...hero.children])if(!child.classList.contains('visitor-hero-art'))copy.appendChild(child);hero.insertBefore(copy,hero.firstChild);}}}
 if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
 const motionControl=doc.querySelector('.visitor-motion-control'),footer=doc.querySelector('.studio-header,header.masthead')??doc.querySelector('footer');
 if(motionControl&&footer&&motionControl.parentNode!==footer)footer.appendChild(motionControl);
