@@ -21,7 +21,7 @@ test('Fleet day puts a paused partition before the workspace; manual Run reveals
   assert.equal(lab.element.querySelector('.teaching-glossary').hasAttribute('open'),false);assert.ok(children.indexOf(lab.element.querySelector('.teaching-frame').closest('.ops-intro'))<children.indexOf(summary));
   const scrolls=[];for(const node of [lab.element,...lab.element.querySelectorAll('*')])node.scrollIntoView=options=>scrolls.push({node,options});
   assert.equal(lab.getState().result,null);assert.equal(scrolls.length,0);
-  await lab.run();assert.equal(document.activeElement,summary.querySelector('h2'));assert.equal(scrolls.length,1);assert.ok(scrolls[0].node===summary.querySelector('.teaching-result').parentNode);assert.deepEqual(scrolls[0].options,{block:'start',behavior:'instant'});assert.equal(lab.getState().playing,false);
+  await lab.run();assert.equal(document.activeElement,summary.querySelector('h2'));assert.equal(scrolls.length,1);/* The focused Result summary heading is scrolled into view, its takeaway just below it. */assert.ok(scrolls[0].node===summary.querySelector('h2'));assert.deepEqual(scrolls[0].options,{block:'start',behavior:'instant'});assert.equal(lab.getState().playing,false);
   assert.match(summary.textContent,/95 completed · 176 unserved · 4 waiting · 9 in progress = 284 requests/);
   assert.equal(lab.element.querySelectorAll('button.studio-button-primary').filter(b=>!b.disabled).length,1);
   const version=lab.getState().result.version;lab.setConfig({fleet_size:25});assert.match(lab.element.querySelector('.model-identity').textContent,new RegExp(version));assert.match(lab.element.querySelector('.model-identity').textContent,/stale/);

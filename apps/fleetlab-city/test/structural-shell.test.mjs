@@ -17,8 +17,9 @@ test('City global shell is idempotent; local sections retain their handlers and 
   assert.equal(h.querySelectorAll('.design-global-nav').length,1);assert.equal(h.querySelectorAll('nav').length,1);
   assert.deepEqual(h.querySelectorAll('.design-global-nav a').map(a=>a.textContent),['Home','Fleet day','Street lab','Explore','About & limits']);
   assert.equal(tabs.parentNode,main);assert.equal(tabs.previousSibling,intro);button.click();assert.equal(clicks,1);
+  assert.equal(main.getAttribute('tabindex'),'-1','the skip link target can take focus');
   const menu=h.querySelector('.design-shell-menu');menu.click();assert.equal(menu.getAttribute('aria-expanded'),'true');assert.equal(h.querySelector('nav').getAttribute('data-expanded'),'true');
-  assert.equal(document.querySelector('footer time').getAttribute('datetime'),'2026-11-08');
+  assert.equal(document.querySelector('footer time').getAttribute('datetime'),'2026-11-11');
  }finally{restore();}
 });
 test('sources are a front door with a skip link and SF v1 orientation; download hrefs stay exact',()=>{

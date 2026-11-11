@@ -27,3 +27,4 @@ test('chapter selection marks only chapter buttons; readiness progress stops on 
 }finally{x.close();}});
 
 test("worker startup failure clears the loading indicator",()=>{const x=setup(true);try{assert.equal(x.by("study-progress").hidden,true);assert.match(x.by("status").textContent,/unavailable/);}finally{x.close();}});
+test('an empty takeaway box is not drawn before a result arrives (defect (c), D6)',()=>{assert.match(readFileSync(new URL('../dispatch/visual.css',import.meta.url),'utf8'),/\.takeaway:empty\{display:none\}/);});
