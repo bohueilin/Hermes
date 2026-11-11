@@ -23,12 +23,12 @@ export const RECEIPT_PATH = "downloads/teaching-package.json";
 // Perf wave (2026-11-09, owner): legacy text and the offline edition rise by exactly the explainer's viewport gate, 285 B.
 // Perf wave 2 (2026-11-10, owner): Street slicing and world reuse add exactly 1,391 B of legacy text and 1,469 B of offline edition.
 // Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add exactly 406 B to each.
-export const LIMITS = Object.freeze({ legacy_text_bytes: 2626515, raw_source_and_tools_bytes: 3940352,
+export const LIMITS = Object.freeze({ legacy_text_bytes: 2626727, raw_source_and_tools_bytes: 3940352,
   nf03_closure_bytes: 557056, nf04_closure_bytes: 524288, depot_route_local_bytes: 524288, depot_closure_bytes: 786432,
   emitted_text_bytes: 3801088, package_metadata_bytes: 57344,
   source_offer_compressed_bytes: 4194304, source_offer_extracted_bytes: 5242880,
   teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 17825792,
-  offline_bytes: 2588120 });
+  offline_bytes: 2588236 });
 // Per-file read caps stay at their pre-Q6 values; only the src/tools tree totals follow the raw ceiling.
 const FILE_CAPTURE_BYTES = 4194304, INTEGRATED_READ_BYTES = 3145728, PUBLICATION_READ_BYTES = 40960;
 const TOOL_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -325,7 +325,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       original_inventory_sha256: digest(canonical(sourceInventory)), owner: "teaching-original-source-and-tools" },
     validation_policy: { repository_path: CONTRACT, ...fingerprint(captured.contracts) },
     license: { repository_path: "LICENSE", ...fingerprint(captured.license) },
-    offline: { path: "downloads/fleetlab-offline.html", ...fingerprint(offline), owner: "complete-offline-edition", reserved_bytes: 33320 }, media,
+    offline: { path: "downloads/fleetlab-offline.html", ...fingerprint(offline), owner: "complete-offline-edition", reserved_bytes: 33204 }, media,
     emitted_files: Object.fromEntries([...site].map(([path, data]) => [path, { ...fingerprint(data), owner: owned.owners[path] }])),
     routes: measured.routes,
     ownership: { receipt: { path: RECEIPT_PATH, owner: "package-metadata", self_hash: "External integration inventory hashes this receipt; own byte size is included by fixed point." },

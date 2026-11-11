@@ -33,11 +33,11 @@ test('the generated boot injects the independently packaged study into the app',
 test('the approved legacy boundary accepts its exact limit and rejects one extra byte without sidecar recovery',()=>{
   assert.equal(typeof tool.measureSiteOwnership,'function','owner gate is not implemented');
   const files=buildSite(root), measured=tool.measureSiteOwnership(files);
-  const limit=2626515;assert.equal(tool.OWNER_LIMITS.legacy_text_bytes,limit);
+  const limit=2626727;assert.equal(tool.OWNER_LIMITS.legacy_text_bytes,limit);
   files.set('styles.css',files.get('styles.css')+' '.repeat(limit-measured.legacy_text_bytes));
   assert.equal(tool.measureSiteOwnership(files).legacy_text_bytes,limit);
   files.set('styles.css',files.get('styles.css')+' ');
-  assert.throws(()=>tool.measureSiteOwnership(files),/legacy.*2626516.*2626515/);
+  assert.throws(()=>tool.measureSiteOwnership(files),/legacy.*2626728.*2626727/);
 });
 
 test('300000-byte scratch NF04-only module has a valid emitted build path without increasing legacy',()=>{

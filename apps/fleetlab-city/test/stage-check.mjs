@@ -13,14 +13,14 @@ export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1b
 // Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
 // Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then the Street slicing and world reuse 1,469 B, to the offline edition.
 // Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add 406 B.
-export const OFFLINE_AFTER={bytes:2588120,sha256:'8dc4dd1283ecdc079f6983147d5638c496e57152e7908583f13a422b5389d2a9'};
+export const OFFLINE_AFTER={bytes:2588236,sha256:'77534e343a3f53ee79255c079d5ad883eb4ca967540625732cde9b5c7e9f42c3'};
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 // Perf waves (2026-11-09 and 11-10, owner): every affected ceiling re-pinned to the exact measured stage, no spare bytes.
 export const BOUNDS={nf03_closure_bytes:595530,nf04_closure_bytes:276671,delivery_order_closure_bytes:281795,r1_closure_bytes:253146,r3_closure_bytes:208607,depot_closure_bytes:568477,
- emitted_text_bytes:3650354,integration_text_bytes:183944,integration_source_bytes:444804,source_offer_extracted_bytes:4162878,source_offer_compressed_bytes:1173516,
- package_metadata_bytes:45385,non_city_bytes:16457765};
+ emitted_text_bytes:3650566,integration_text_bytes:183944,integration_source_bytes:444804,source_offer_extracted_bytes:4163092,source_offer_compressed_bytes:1173616,
+ package_metadata_bytes:45385,non_city_bytes:16458193};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,

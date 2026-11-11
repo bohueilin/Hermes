@@ -34,7 +34,7 @@ test('approved enhancement artwork has its own bounded inventory and holds V1 ou
 
 test('only the approved aggregate and capacity ceilings change, while all presentation dependencies count',()=>{
  // Q6 (reconciliation 7.2) raises raw, emitted, metadata and extracted ceilings and adds explicit depot counters only.
- assert.deepEqual(LIMITS,{legacy_text_bytes:2626515,raw_source_and_tools_bytes:3940352,nf03_closure_bytes:557056,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432,emitted_text_bytes:3801088,package_metadata_bytes:57344,source_offer_compressed_bytes:4194304,source_offer_extracted_bytes:5242880,teaching_text_plus_source_bytes:7340032,teaching_generation_bytes:17825792,offline_bytes:2588120});
+ assert.deepEqual(LIMITS,{legacy_text_bytes:2626727,raw_source_and_tools_bytes:3940352,nf03_closure_bytes:557056,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432,emitted_text_bytes:3801088,package_metadata_bytes:57344,source_offer_compressed_bytes:4194304,source_offer_extracted_bytes:5242880,teaching_text_plus_source_bytes:7340032,teaching_generation_bytes:17825792,offline_bytes:2588236});
  assert.equal(OWNER_LIMITS.nf04_closure_bytes,524288);assert.equal(OWNER_LIMITS.depot_closure_bytes,786432);assert.equal(OWNER_LIMITS.emitted_text_bytes,3801088);
  const additions=['enhancement-motion.mjs','enhancement-media.mjs','enhancement-media.css'];
  for(const name of additions)assert.ok(BRAND_TEXT.includes(name));

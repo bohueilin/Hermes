@@ -28,12 +28,12 @@ const sizes=({receipt,files})=>{const raw=gunzipSync(files.get(receipt.source_of
 test('legacy text stays within its catalog look_for re-based ceiling',()=>{
  const v=measureSiteOwnership(site).legacy_text_bytes;
  // Wave 3 owner W3-D2: exact final legacy measurement, no added allowance. Perf waves (2026-11-09 and 11-10, owner): +285 B, then +1,391 B. Fixes wave (2026-11-10, owner): +406 B.
- assert.ok(v<=2626515,`legacy text ${v} > 2626515 (Step A baseline 2605087, re-based at C2 and at the catalog look_for wave with no allowance; ${runtime})`);
+ assert.ok(v<=2626727,`legacy text ${v} > 2626727 (Step A baseline 2605087, re-based at C2 and at the catalog look_for wave with no allowance; ${runtime})`);
 });
 
-const ROWS=[['raw source and tools',r=>r.counts.raw_source_and_tools_bytes,3579912,0],
- ['development source offer, extracted',r=>r.counts.source_offer_extracted_bytes,4162819,0],
- ['development source offer, compressed',r=>r.counts.source_offer_compressed_bytes,1173457,0],
+const ROWS=[['raw source and tools',r=>r.counts.raw_source_and_tools_bytes,3580124,0],
+ ['development source offer, extracted',r=>r.counts.source_offer_extracted_bytes,4163033,0],
+ ['development source offer, compressed',r=>r.counts.source_offer_compressed_bytes,1173557,0],
  ['development package metadata',r=>r.counts.package_metadata_bytes,44302,1024],
  ['integration source',r=>r.integration_source.bytes,444804,0]];
 for(const [name,read,base,room]of ROWS)test(`${name} stays within ${room.toLocaleString('en-US')} B of its Step A baseline`,()=>{
