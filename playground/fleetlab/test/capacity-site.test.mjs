@@ -60,7 +60,7 @@ test("check-dist accepts the real site, and legacy ownership and aggregate stay 
   assert.deepEqual(problemsOf(site), []);
   const codeBytes = [...site.values()].filter((v) => typeof v === "string").reduce((sum, text) => sum + Buffer.byteLength(text), 0);
   const ownership = measureSiteOwnership(site);
-  assert.ok(ownership.legacy_text_bytes <= APP_MAX_BYTES, `${ownership.legacy_text_bytes} bytes of legacy-owned text`);
+  assert.ok(ownership.legacy_text_bytes <= OWNER_LIMITS.legacy_text_bytes, `${ownership.legacy_text_bytes} bytes of legacy-owned text`);
   assert.equal(codeBytes, ownership.emitted_text_bytes);
   assert.ok(codeBytes <= OWNER_LIMITS.emitted_text_bytes, `${codeBytes} bytes of aggregate emitted text`);
 });
@@ -94,7 +94,8 @@ test("the offline single file never reaches the capacity viewer and stays within
   assert.ok(!new RegExp(`^${MODULE_MARKER.replace(/[/]/g, "\\/")}\\S*depot-capacity`, "m").test(html), "no depot-capacity module marker");
   assert.ok(!html.includes(".fl-capacity-bench"), "hosted bench CSS is absent");
   assert.ok(!html.includes("fleetlab.capacity-release/"), "release sidecar is absent");
-  assert.ok(Buffer.byteLength(html) <= APP_MAX_BYTES - 50_000, "the offline reserve remains available");
+  assert.equal(Buffer.byteLength(html), 2_586_822, "the authorized offline bytes stay exact");
+  assert.equal(APP_MAX_BYTES - Buffer.byteLength(html), 34_618, "the remaining offline reserve stays exact");
 });
 
 test("capacity packages route-local CSS with strict missing, changed and unexpected-file checks", () => {

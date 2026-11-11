@@ -1,27 +1,27 @@
 import {teachingResult} from './teaching-projection.js';
-// Interface entry (contract section 8, design §7): builds the shell of design §7.2 and wires every region to one store
-// and to the engine host. The region modules render the knobs, map, transport, inspector, Learn and Experiment; this
-// file renders the top bar, the NOW panel, the panel across replications, the chart row, the fork section, the run
-// states of design §7.7 and the footer, and it runs the engine for Run window, the fork and a verdict seed.
-//
-// Decisions this module makes where the design is silent (reported with the build):
-// - Run window runs 5 replications of seed set 1 (the §7.2 wireframe reads "replay 1 of 5") and animates the first.
-// - Learn and Experiment render inside the chart row, the only region wide enough, ahead of the charts. The root
-//   carries `data-mode`, so the phone layout keeps that row on screen in those modes.
-// - The fork (D-10) runs on the watched replay's seed. In a Learn case lane A is the preset's axis baseline and lane B
-//   its candidate; in Sandbox lane A undoes the last knob change and lane B keeps it; from a verdict, lanes A and B are
-//   the frozen spec's arms on the spec's shared envelope.
-// - The demand and traffic strips sit under the scrubber for the selected area (San Francisco when nothing is
-//   selected); the traffic strip reads the highway toward that area.
-// - While the fork shows a verdict seed, the map, the NOW panel, the panel across replications and the strips (which
-//   replay the Sandbox world) are hidden and the top bar names the verdict seed, so only one THIS REPLAY seed is on
-//   screen (design §7.4, H-10). Closing the fork shows them again.
-// - The wait p90 values of the panel across replications and of the wait chart summary carry their completed rides.
-// - Before any run the NOW panel and the panel across replications each show one state line and no rows, so absence is
-//   said once and never reads as a value.
-// - Open the fork closes the inspector, scrolls the fork into view, focuses its heading and announces it politely.
-// - In an idle step after start (and after a traffic spread change), the host builds the lookup tables for the
-//   scenario's sigma, with a preparing line under the map, so the first run does not pay for them.
+// Interface shell and engine orchestration; region modules own their rendering.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import { armScenarios, experimentEnvelope } from "../model/experiment.js";
 import { violationId } from "../model/invariants.js";
@@ -349,6 +349,7 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
   const cleanups = [];
   let destroyed = false;
   let autoplayVersion = 0;
+  let prepareEpoch = 0;
   const runs = { window: null, fork: null, forkArgs: null, forkMeta: null, forkNotice: false, copyStatus: null, prepareTimes: null };
   // Lookup tables built ahead of the first run: sigmas done (or failed, so they are not retried), the pending build, the idle handle.
   const warm = { done: new Set(), pending: null, idle: null };
@@ -580,6 +581,7 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
   }
   cleanups.push(store.subscribe((state, action) => {
     if (action.type === "mode/set" || action.type === "present/open") autoplayVersion++;
+    if (action.type === "present/close") prepareEpoch++;
   }));
   // The isometric picture is the page's (design §7.3 as amended); the flat schematic stays behind its toggle and
   // is what a browser without a 2D canvas gets, with the reason written.
@@ -667,19 +669,32 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
    * cached and nothing is shipped, and `prepared` is set only when both runs actually landed.
    */
   async function preparePresent() {
-    if (destroyed) return null;
+    if (destroyed || !store.getState().present.on) return null;
+    const epoch = ++prepareEpoch;
     const windowStart = performance.now();
     startFromPreset(store.dispatch, PRESENT_PRESET_ID);
     store.dispatch({ type: "mode/set", mode: "sandbox" });
-    await runWindow();
+    const setup = store.getState();
+    const sameSetup = state => !destroyed && prepareEpoch === epoch && state.present.on
+      && state.presetId === PRESENT_PRESET_ID && state.scenario === setup.scenario
+      && state.experiment.draft === setup.experiment.draft;
+    const windowPending = runWindow();
+    const windowId = store.getState().run.id;
+    await windowPending;
     const windowMs = performance.now() - windowStart;
-    if (destroyed) return null;
+    const windowState = store.getState();
+    const sameWindow = state => state.run.id === windowId && state.run.status === "done" && !state.run.stale
+      && state.run.scenarioAtQueue === setup.scenario && state.run.worldAtQueue?.presetId === PRESENT_PRESET_ID;
+    if (!sameSetup(windowState) || !sameWindow(windowState) || windowState.run.log === null) return null;
     const experimentStart = performance.now();
-    await experiment.freezeAndRun();
+    const experimentPending = experiment.freezeAndRun();
+    const frozen = store.getState().experiment;
+    await experimentPending;
     const experimentMs = performance.now() - experimentStart;
-    if (destroyed) return null;
     const state = store.getState();
-    if (state.run.log === null || state.experiment.verdict === null) return null;
+    if (!sameSetup(state) || !sameWindow(state) || state.run.log !== windowState.run.log
+      || state.experiment.id !== frozen.id || state.experiment.frozen !== frozen.frozen
+      || state.experiment.status !== "done" || state.experiment.verdictStale || state.experiment.verdict === null) return null;
     runs.prepareTimes = { windowMs, experimentMs };
     store.dispatch({ type: "present/prepared" });
     return runs.prepareTimes;
@@ -714,7 +729,9 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
 
   function renderTopBar(state) {
     root.setAttribute("data-mode", state.mode);
-    setText(modeHelp,state.present.on?`Present: guided walkthrough. Current mode: ${labels.MODES[state.mode].name}. Prepare replaces the current experiment with the walkthrough example and switches to Sandbox.`:({learn:'Learn: follow a question through annotated examples.',sandbox:'Sandbox: change settings and inspect a simulated day.',experiment:'Experiment: compare one change across the same paired scenarios.'})[state.mode]);
+    setText(modeHelp,state.present.on?'Guided walkthrough · OPS-01. A simulated day and its paired experiment prepare in this browser. Story controls inspect those computed results.':({learn:'Learn: follow a question through annotated examples.',sandbox:'Sandbox: change settings and inspect a simulated day.',experiment:'Experiment: compare one change across the same paired scenarios.'})[state.mode]);
+    modeButtons[0].parentNode.hidden = state.present.on;
+    topStatus.hidden = state.present.on && !state.present.prepared;
     for (const b of modeButtons) b.setAttribute("aria-pressed", b.getAttribute("data-mode") === state.mode ? "true" : "false");
     const run = state.run;
     const seed = run.log !== null ? run.selectedSeed : null;
@@ -950,6 +967,8 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
     // ledger's numbers; the strips container stays, with its strips hidden, because it is where the day bar mounts.
     const presenting = state.present.on;
     root.setAttribute("data-present", presenting ? "true" : "false");
+    root.setAttribute("data-present-ready", String(state.present.prepared));
+    if (presenting && !state.present.prepared) regions.map.hidden = true;
     presentButton.setAttribute("aria-pressed", presenting ? "true" : "false");
     // The knob sheet owns its own inert (it is inert only while it is off screen), so presenting only hides it.
     for (const node of [regions.knobs, controls.toggle]) node.hidden = presenting;
@@ -958,8 +977,9 @@ function mountInterface({ root, regions, side }, { createWorker, engineHost, cop
       node.toggleAttribute("inert", presenting);
     }
     for (const id of ["ledger", "rail"]) {
-      regions[id].hidden = !presenting;
-      regions[id].toggleAttribute("inert", !presenting);
+      const hidden = !presenting || (id === "rail" && !state.present.prepared);
+      regions[id].hidden = hidden;
+      regions[id].toggleAttribute("inert", hidden);
     }
     if (viewGroup !== null) {
       viewGroup.hidden = presenting;

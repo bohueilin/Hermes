@@ -842,4 +842,13 @@ describe("Experiment flow across modes and presets (review: experiment-flow lens
     assert.deepEqual(back.experiment.draft, s.experiment.draft);
     assert.throws(() => reduce(s, { type: "experiment/fromPreset", presetId: "UC-01", scenario: fakeScenario(), draft: { question: "" } }), TypeError);
   });
+  test('prepared walkthrough survives view actions but is invalidated by replacement inputs or runs',()=>{
+    const prepared=steps(frozenState(),[VERDICT_X1,{type:'present/open'},{type:'present/prepared'}]);
+    for(const action of [{type:'clock/set',clock_s:20000},{type:'fork/pin',car:'SJ-1'},{type:'inspector/open',target:{depot:'SJ-1'}},{type:'experiment/selectSeed',seed:1001}]){
+      assert.equal(step(prepared,action).present.prepared,true,action.type);
+    }
+    for(const action of [{type:'preset/select',presetId:'other',scenario:fakeScenario('other')},SJ_CARS,{type:'experiment/draft',patch:{question:'Changed'}},{type:'run/queued',id:'replacement-window',total:5},{type:'experiment/freeze',id:'replacement-pair',spec:fakeSpec(),digest:DIGEST,label:'new',frozenAt:'now'}]){
+      const changed=step(prepared,action);assert.equal(changed.present.prepared,false,action.type);assert.equal(changed.playing,false,action.type);
+    }
+  });
 });

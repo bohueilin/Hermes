@@ -34,7 +34,7 @@ test('a local Pause outlives the hosted Resume',async()=>{const x=setup();try{x.
 test('Play pressed during a visitor pause waits for Resume',async()=>{const x=setup();try{x.show(true);await tick();x.b.click();x.hold(true);x.b.click();await tick();assert.equal(x.plays,1);assert.equal(x.v.paused,true);x.hold(false);await tick();assert.equal(x.plays,2);assert.equal(x.v.paused,false);assert.equal(x.b.textContent,'Pause');}finally{x.dispose();x.restore();}});
 test('under reduced motion the hosted paused state alone does not block an explicit Play',async()=>{const x=setup({reduced:true});try{document.documentElement.setAttribute('data-visitor-motion','paused');x.show(true);await tick();assert.equal(x.plays,0);x.b.click();await tick();assert.equal(x.plays,1);assert.equal(x.v.paused,false);}finally{x.dispose();x.restore();}});
 test('disposal disconnects the visitor-pause watcher',()=>{const x=setup();x.dispose();assert.ok(x.watchers.length>0&&x.watchers.every(w=>w.off));x.restore();});
-test('the hosted control reaches the loop, and reduced motion keeps the lesson Play working',async()=>{
+test('the hosted control preserves user Pause through reduced motion; system-only reduction permits local Play',async()=>{
  for(const order of ['pause, then reduced motion','reduced motion from the start']){
   const x=setup({reduced:order==='reduced motion from the start'}),previous=globalThis.MutationObserver;globalThis.MutationObserver=window.MutationObserver;try{
    decorateVisitors(document);const control=document.querySelector('.visitor-motion-control'),root=document.documentElement;x.show(true);await tick();
@@ -43,8 +43,8 @@ test('the hosted control reaches the loop, and reduced motion keeps the lesson P
     control.click();x.fire();await tick();assert.equal(x.v.paused,false);control.click();x.fire();
     x.restore.dom.media.set('(prefers-reduced-motion: reduce)',true);x.fire();
    }
-   assert.equal(control.disabled,true);assert.equal(control.textContent,'Visual motion: reduced');assert.equal(root.getAttribute('data-visitor-motion'),'paused');assert.equal(root.hasAttribute('data-visitor-user-paused'),false);
-   x.b.click();await tick();assert.equal(x.v.paused,false);
+   assert.equal(control.disabled,true);assert.equal(control.textContent,'Visual motion: reduced');assert.equal(root.getAttribute('data-visitor-motion'),'paused');assert.equal(root.hasAttribute('data-visitor-user-paused'),order==='pause, then reduced motion');
+   x.b.click();await tick();assert.equal(x.v.paused,order==='pause, then reduced motion');
   }finally{globalThis.MutationObserver=previous;x.dispose();x.restore();}
  }
 });

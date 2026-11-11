@@ -23,3 +23,16 @@ test('flat fallback keeps road names and selectable focus when WebGL is unavaila
   assert.equal(scene.getCamera().target[0],.5);
  }finally{scene?.destroy();restore();}
 });
+test('local street names wait for close zoom while queue labels retain priority',()=>{
+ const restore=installFakeDom();let scene;try{
+  const edges=[-.3,0,.3].map((y,i)=>({id:`edge-${i}`,name:`Road ${i}`,points:[[.4,y],[.6,y]]}));
+  scene=createStreetScene({network:{...network,edges},createRenderer:()=>null});
+  const visible=()=>scene.element.querySelectorAll('.street-road-label').filter(n=>!n.hidden);
+  assert.equal(visible().length,0);
+  scene.render(null,{vehicles:[],roads:[{id:'edge-1',queued:2}]});
+  assert.deepEqual(visible().map(n=>n.textContent),['Road 1 · 2 queued']);
+  const zoom=scene.element.querySelectorAll('button').find(n=>n.textContent==='+');zoom.click();zoom.click();
+  assert.ok(visible().some(n=>n.textContent==='Road 0'));
+  assert.ok(visible().some(n=>n.textContent==='Road 2'));
+ }finally{scene?.destroy();restore();}
+});

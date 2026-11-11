@@ -1,6 +1,4 @@
-/* FleetLab UI class inventory:
-.fl-app .fl-strip .fl-strip__full .fl-strip__short .fl-topbar .fl-modes .fl-clock .fl-knobs .fl-knobs__run .fl-knobs-toggle .fl-map .fl-map__stamp .fl-transport .fl-transport__strips .fl-side .fl-now .fl-now__row .fl-across .fl-segmented .fl-charts .fl-charts__set .fl-charts__wide .fl-chart .fl-chart__summary .fl-footer .fl-group .fl-contents .fl-panel .fl-panel-alt .fl-drawer .fl-inspector .fl-popover .fl-tooltip .fl-button .fl-button--primary .fl-field .fl-field--changed .fl-field--invalid .fl-field__note .fl-chip-replay .fl-chip-across .fl-limits-chip .fl-verdict .fl-teaching-chip .fl-verdict__footer .fl-verdict-chip .fl-verdict-chip__glyph .fl-verdict-chip__word .fl-stale .fl-absent .fl-error .fl-error__slot .fl-unserved .fl-scroll .fl-table .fl-board .fl-code .fl-mono .fl-title .fl-muted .fl-small-label .fl-learn-text .fl-sr-only .fl-yard .fl-route-highway__casing .fl-route-highway__centre .fl-route-local .fl-route--congested .fl-chevron .fl-depot-tile .fl-rider-ring .fl-glyph-edge .fl-glyph-ring .fl-car .fl-fam-rider .fl-fam-empty .fl-fam-available .fl-fam-depot .fl-pinned-car .fl-hit .fl-chart__grid .fl-chart__axis .fl-chart__line .fl-chart__band .fl-chart__cursor .fl-hatch-line .fl-map-legend .fl-iso .fl-iso__canvas .fl-iso__overlay .fl-iso__label .fl-iso__label--area .fl-iso__label--depot .fl-iso__label--route .fl-iso__label--local .fl-iso__plate .fl-iso__leader .fl-iso__text .fl-iso__numbers .fl-iso__count .fl-iso__pin .fl-iso__pick .fl-ledger .fl-ledger__beat .fl-ledger__prepare .fl-ledger__figures .fl-ledger__figure .fl-ledger__foot .fl-ledger__value .fl-ledger__table .fl-ticker .fl-ticker__line .fl-rail .fl-reading-card .fl-registry .fl-hourly .fl-readout .fl-refusals .fl-flow .fl-flow__arrow .fl-list-plain .fl-situation__proxy .fl-scrubber .fl-scrubber__band .fl-scrubber__input .fl-scrubber__ticks .scale-lab .scale-chooser .scale-run .scale-setup .scale-result .scale-chart
-*/
+
 
 :root {--font-display:Georgia,"Times New Roman",serif;
 color-scheme:light dark;
@@ -1002,16 +1000,16 @@ body {margin:0;background:var(--ground);}
 .bay-profile-portraits figcaption{font-size:10px;color:#4d6a58;text-align:center;line-height:1.5;margin-top:7px;}
 .ops-service-breakdown summary{min-height:var(--target);padding:14px 0;font-size:12px;cursor:pointer;}
 
-.street-lab{padding:36px 20px 64px;color:#173348;background:#f7f9fc;}
+.street-lab{padding:36px 20px 64px;color:#143c2b;background:#fafbf7;}
 .street-lab[hidden]{display:none;}
 .street-intro{max-width:920px;margin:0 auto 32px;}
 .street-intro h1{font-size:clamp(38px,5.5vw,72px);font-weight:500;line-height:1.05;letter-spacing:-.055em;margin:18px 0 20px;}
-.street-intro h1 span{color:#3772ba;}
-.street-intro .hero-lede{max-width:680px;font-size:18px;line-height:1.6;color:#52697c;}
-.street-scope-line{font-size:12px;color:#52697c;line-height:1.8;}
+.street-intro h1 span{color:#143c2b;}
+.street-intro .hero-lede{max-width:680px;font-size:18px;line-height:1.6;color:#526762;}
+.street-scope-line{font-size:12px;color:#526762;line-height:1.8;}
 .street-presets{display:flex;flex-wrap:wrap;gap:8px;max-width:1440px;margin:0 auto 28px;}
-.street-presets .studio-button{background:#fff;border:1px solid #d9e3ed;border-radius:30px;padding:10px 18px;font-size:12px;}
-.street-presets [aria-pressed="true"]{background:#174d87;color:#fff;border-color:#174d87;}
+.street-presets .studio-button{background:#fff;border:1px solid #dce5dd;border-radius:30px;padding:10px 18px;font-size:12px;}
+.street-presets [aria-pressed="true"]{background:#143c2b;color:#fff;border-color:#143c2b;}
 .street-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;max-width:1440px;margin:auto;align-items:start;}
 .street-settings{background:#fff;border:1px solid #dce5ee;border-radius:16px;padding:22px;min-width:0;}
 .street-inputs{border:0;margin:0;padding:0;min-width:0;}
@@ -1040,11 +1038,11 @@ body {margin:0;background:var(--ground);}
 .street-map-controls{display:flex;flex-wrap:wrap;gap:7px;padding:8px 16px 12px;}
 .street-map-controls .studio-button{padding:7px 12px;font-size:11px;}
 .street-map-meta{padding:8px 20px;font-size:10px;color:#617886;display:flex;justify-content:space-between;gap:10px;background:#edf3f2;}
-.street-viewport{position:relative;height:520px;background:#eaf0ed;overflow:hidden;}
+.street-viewport{position:relative;height:520px;background:#e6f0e9;overflow:hidden;}
 .street-viewport>canvas,.street-viewport>svg,.street-labels{position:absolute;inset:0;width:100%;height:100%;}
 .street-viewport>canvas{touch-action:none;cursor:grab;}
 .street-labels{pointer-events:none;}
-.street-road-label{position:absolute;top:0;left:0;padding:4px 8px;background:#fffffff0;border:1px solid #cad8d9;border-radius:5px;color:#405b67;font-size:10px;line-height:1.3;box-shadow:0 2px 6px #1a48520a;}
+.street-road-label{position:absolute;top:0;left:0;padding:4px 8px;background:#fffffff0;border:1px solid #9fb6ad;border-radius:5px;color:#143c2b;font-size:10px;line-height:1.3;height:23px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 6px #1a48520a;}
 .street-road-label[hidden]{display:none;}
 .street-map figcaption{padding:12px 20px;font-size:10px;line-height:1.7;color:#728393;}
 .street-map figcaption a{color:#496d8b;}
@@ -1681,7 +1679,7 @@ color-scheme:light;--faint:#7a899b;
 .request-outcomes dl{margin:0 0 12px}.request-outcomes dt{font-weight:700}.request-outcomes dd{margin:0 0 8px}
 .request-outcomes ul,.bay-map-legend{display:flex;flex-wrap:wrap;gap:8px 16px;list-style:none;padding:0}
 .request-bar{display:flex;width:100%;height:18px;overflow:hidden;border-radius:4px}.request-bar span{min-width:0}
-.bay-map-legend{margin:12px 16px;font-size:14px}.bay-map-legend li{display:flex;align-items:center;gap:6px}
+.bay-map-legend{margin:4px 16px 10px;font-size:12px;flex-wrap:nowrap;gap:4px;overflow-x:auto;scroll-padding-inline:8px}.bay-map-legend li{flex-shrink:0}.bay-map-legend li{display:flex;align-items:center;gap:6px}
 .bay-map-legend .legend-swatch{display:inline-block;width:14px;height:8px;border-radius:3px}.bay-map-legend .legend-depot{height:12px;border-radius:0;border-bottom:4px solid #cbbd97}
 
 .ops-teaching:has(.request-outcomes) .teaching-parts{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1706,3 +1704,37 @@ color-scheme:light;--faint:#7a899b;
 
 /* Display type. */
 h1:not(.fl-title),.visitor-film-title,.catalog-library-title,[data-role="present-beat"],#chapter-title,.methodology-explainer h3,:is(#visitor-founder,#visitor-contact,.start-points,.learning-path-heading,.network-flows-feature,.visitor-section-heading,.approach-section,.approach-case,.approach-close,.delivery-guide,.delivery-lessons,.learning-panel,.why) h2{font-family:var(--font-display)}
+
+.operations-lab .ops-workspace{grid-template-columns:minmax(0,1fr)}
+.ops-setup .ops-controls{position:static;max-height:none}
+.ops-intro>.ops-preset{display:grid;gap:6px;max-width:440px}
+.ops-intro>.ops-preset select{font:inherit;min-width:0;width:100%;min-height:44px;border:1px solid var(--rule-control);border-radius:8px;background:var(--panel);padding:8px}
+.ops-teaching .teaching-parts{display:block;padding:0;border:0;background:none;margin:10px 0}
+.ops-teaching .teaching-parts h3{display:none}
+.ops-context>summary,.ops-capacity>summary,.ops-setup>summary{padding:12px 0;cursor:pointer;font-weight:600}
+.ops-context{margin-top:18px}
+.ops-intro .ops-run-line{margin-top:14px}
+
+.lab-hero{max-width:1100px;margin-inline:auto;min-width:0}.lab-hero>p{max-width:68ch}.visitor-hero-art{margin:16px 0;max-width:360px}.visitor-hero-art img{aspect-ratio:4/3;object-fit:cover}.visitor-hero-art figcaption{font-size:12px;line-height:1.5;margin-top:8px;color:#435b50}
+.ops-intro>#enhancement-fleet-day{max-width:360px}.ops-intro .teaching-heading h1{margin:12px 0}.ops-intro .teaching-parts p{margin:8px 0}
+@media(min-width:960px){.lab-hero:not(.visitor-purpose){display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,.55fr);column-gap:36px}.lab-hero:not(.visitor-purpose)>*{grid-column:1}.lab-hero:not(.visitor-purpose)>.visitor-hero-art,.lab-hero>#enhancement-fleet-day{grid-column:2;grid-row:1/12;align-self:start}.lab-hero .teaching-heading{display:block}}
+.studio-header .visitor-motion-control{margin:0}.studio-header{position:sticky;top:0;z-index:30}.studio-header .visitor-motion-control{font-size:12px;padding:8px 12px}.studio-header nav{flex-wrap:wrap}
+@media(max-width:767px){.studio-header .visitor-motion-control{flex-basis:100%;margin:0}.visitor-purpose .visitor-byline{margin-top:16px!important}.visitor-purpose .visitor-first-action{margin-top:8px}.ops-intro .teaching-title{font-size:36px!important}.lab-hero .visitor-hero-art{max-width:280px}}
+
+.visitor-hero-art .design-readiness-image{aspect-ratio:1672/941;object-fit:contain}.visitor-purpose>.visitor-hero-art{align-self:start}
+@media(max-width:767px){.operations-lab{padding-top:24px}}
+
+html:has(.studio-header){scroll-padding-top:150px}
+.fl-app[data-present="true"][data-present-ready="false"] .fl-ledger{grid-column:1/-1;max-width:760px;width:100%;justify-self:center;padding:clamp(24px,5vw,56px)}
+.fl-app[data-present="true"][data-present-ready="false"] .fl-rail{display:none}
+
+@media(max-width:767px){.studio-header{padding-inline:12px;gap:8px;min-height:88px}.studio-header .design-brand strong{display:none}.studio-header .studio-brand{flex:0 0 48px}.studio-header .visitor-motion-control{flex:1 1 130px;order:2;font-size:11px;padding-inline:8px}.studio-header .studio-menu{order:3;margin:0;padding:8px}.studio-header nav[data-expanded=true]{order:4}}
+
+@media(min-width:768px) and (max-width:959px){.studio-header{padding-inline:12px;gap:8px}.studio-header nav{gap:0}.studio-header nav a{font-size:12px;padding-inline:6px}}
+
+/* Recorded Fleet day ledger and descriptive observation. */
+.ops-ledger{margin-block:24px;padding-block:20px;border-top:1px solid #aebdca;}
+.ops-ledger p{font-size:13px;line-height:1.7;white-space:normal;overflow:visible;overflow-wrap:anywhere;}
+.ops-ledger details{margin-top:12px;}
+.ops-ledger-bar{display:flex;width:100%;height:24px;border-radius:4px;overflow:hidden;margin-block:16px;}
+.ops-ledger-bar span{min-width:0;height:100%;border-right:1px solid #edf4ff;}

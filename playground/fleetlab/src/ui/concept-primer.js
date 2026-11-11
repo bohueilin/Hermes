@@ -16,7 +16,7 @@ const content={
 export function conceptPrimer(kind){
  const c=content[kind];if(!c)throw new RangeError('Unknown concept primer');
  return el('details',{class:'concept-primer','data-concept':kind,open:kind==='fleet'},[
-  el('summary',{},[el('span',{},c.title),' ',el('small',{class:'primer-summary-meta'},'Visual primer')]),
+  el('summary',{},[el('span',{},c.title+' '),el('small',{class:'primer-summary-meta'},'Visual primer')]),
   el('div',{class:'primer-body'},[el('p',{class:'eyebrow'},c.kicker),el('p',{class:'primer-description'},c.description),el('figure',{},[c.body(),el('figcaption',{},'Concept diagram · not simulation output')]),el('p',{class:'primer-takeaway'},c.lesson)]),
  ]);
 }

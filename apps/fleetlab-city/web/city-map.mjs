@@ -4,12 +4,13 @@ const empty = () => ({type:'FeatureCollection',features:[]});
 const make = (tag, cls, text) => { const e=document.createElement(tag);e.className=cls;if(text)e.textContent=text;return e; };
 export class CityMap {
   constructor(host, roads, geometry, {flat=false, replay=false, onInspect=()=>{}}={}) {
-    Object.assign(this,{host,roads,geometry,replay,onInspect,sites:[],markers:[],routes:empty(),mask:'support',flat,center:[-122.436,37.77],zoom:11.6});
+    // The atlas opens framing fictional depots A and B below the map toolbar; phones need a wider view.
+    Object.assign(this,{host,roads,geometry,replay,onInspect,sites:[],markers:[],routes:empty(),mask:'support',flat,center:replay?[-122.436,37.77]:[-122.4306,innerWidth<480?37.7683:37.7584],zoom:replay?11.6:innerWidth<480?11.4:12.2});
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(host);
     if(flat){this.useFlat();return;}
     try {
       ml.setWorkerUrl(new URL('./vendor/maplibre-gl-worker.mjs',import.meta.url).href);
-      this.map=new ml.Map({container:host,center:this.center,zoom:11.6,minZoom:10,maxZoom:20,attributionControl:false,
+      this.map=new ml.Map({container:host,center:this.center,zoom:this.zoom,minZoom:10,maxZoom:20,attributionControl:false,
         style:{version:8,sources:{land:{type:'geojson',data:{type:'Feature',geometry:geometry.land,properties:{}}},roads:{type:'geojson',data:roads,maxzoom:20,tolerance:.1},route:{type:'geojson',data:empty()}},layers:[
           {id:'water',type:'background',paint:{'background-color':'#e0eee8'}},
           {id:'land',source:'land',type:'fill',paint:{'fill-color':'#f7f5e9'}},
@@ -20,7 +21,7 @@ export class CityMap {
         ]}});
       this.map.addControl(new ml.NavigationControl({showCompass:false}),'top-right');
       this.map.addControl(new ml.ScaleControl({unit:'imperial'}),'bottom-left');
-      this.map.on('load',()=>{this.ready=true;this.map.resize();this.map.fitBounds(BOX,{padding:30,duration:0});this.setRoutes(this.routes);this.setSites(this.sites);this.setMask(this.mask);this.setScenario(this.scenario??[]);if(this.fitPending)this.fitRoute();});
+      this.map.on('load',()=>{this.ready=true;this.map.resize();if(this.replay)this.map.fitBounds(BOX,{padding:30,duration:0});this.setRoutes(this.routes);this.setSites(this.sites);this.setMask(this.mask);this.setScenario(this.scenario??[]);if(this.fitPending)this.fitRoute();});
       this.map.on('click','roads',e=>{const p=e.features[0].properties;onInspect(`${p.name} · ${p.class} · ${p.status}. Snapshot geometry; access is not verified.`);});
       this.map.getCanvas().addEventListener('webglcontextlost',e=>{e.preventDefault();this.useFlat();});
       this.map.on('error',()=>onInspect('Map rendering encountered a problem. Use the flat map if streets are unavailable.'));
@@ -33,7 +34,7 @@ export class CityMap {
   setRoutes(routes){this.routes=routes;this.map?.getSource('route')?.setData(routes);this.drawFlat();}
   setCar(sample){if(this.sample===sample)return;this.sample=sample;if(this.map){if(!this.car){const el=make('div','vehicle-map-marker');this.carIcon=make('span','vehicle-map-icon','↑');el.append(this.carIcon);el.setAttribute('role','img');el.setAttribute('aria-label','Selected vehicle, enlarged symbol');this.car=new ml.Marker({element:el}).setLngLat([0,0]).addTo(this.map);}this.car.getElement().hidden=!sample;if(sample){this.car.setLngLat([sample[1],sample[2]]);this.carIcon.style.transform=`rotate(${sample[3]}deg)`;}}this.drawFlat(true);}
   fit(){if(this.map)this.map.fitBounds(BOX,{padding:35,duration:0});else{this.center=[-122.436,37.77];this.zoom=11.6;this.drawFlat();}}
-  fitRoute(){this.fitPending=true;const coords=this.routes.features.flatMap(f=>f.geometry.coordinates);if(!coords.length){this.fit();return;}const box=[[Math.min(...coords.map(p=>p[0])),Math.min(...coords.map(p=>p[1]))],[Math.max(...coords.map(p=>p[0])),Math.max(...coords.map(p=>p[1]))]];if(this.ready){this.map.fitBounds(box,{padding:65,maxZoom:16,duration:0});this.fitPending=false;}else if(this.flat){this.center=[(box[0][0]+box[1][0])/2,(box[0][1]+box[1][1])/2];const scale=Math.min((this.host.clientWidth-100)/Math.max(.0001,box[1][0]-box[0][0]),(this.host.clientHeight-100)*Math.cos(this.center[1]*Math.PI/180)/Math.max(.0001,box[1][1]-box[0][1]));this.zoom=Math.max(10,Math.min(16,Math.log2(scale*360/256)));this.drawFlat();}}
+  fitRoute(){this.fitPending=true;const coords=this.routes.features.flatMap(f=>f.geometry.coordinates);if(!coords.length){this.fit();return;}const box=[[Math.min(...coords.map(p=>p[0])),Math.min(...coords.map(p=>p[1]))],[Math.max(...coords.map(p=>p[0])),Math.max(...coords.map(p=>p[1]))]];if(this.ready){this.map.resize();this.map.fitBounds(box,{padding:65,maxZoom:16,duration:0});this.fitPending=false;}else if(this.flat){this.center=[(box[0][0]+box[1][0])/2,(box[0][1]+box[1][1])/2];const scale=Math.min((this.host.clientWidth-100)/Math.max(.0001,box[1][0]-box[0][0]),(this.host.clientHeight-100)*Math.cos(this.center[1]*Math.PI/180)/Math.max(.0001,box[1][1]-box[0][1]));this.zoom=Math.max(10,Math.min(16,Math.log2(scale*360/256)));this.drawFlat();}}
   focusCar(){if(!this.sample)return;if(this.map)this.map.jumpTo({center:[this.sample[1],this.sample[2]],zoom:16.5});else{this.center=[this.sample[1],this.sample[2]];this.zoom=16;this.drawFlat();}}
   resize(){this.map?.resize();this.drawFlat();}
   useFlat(){this.map?.remove();this.map=null;this.ready=false;this.flat=true;this.car=null;this.markers=[];this.host.replaceChildren();this.canvas=make('canvas','flat-canvas');this.canvas.tabIndex=0;this.canvas.setAttribute('aria-label','Flat street map. Arrow keys pan; plus and minus zoom.');this.host.append(this.canvas);const controls=make('div','flat-controls');for(const [label,step]of [['Zoom in',1],['Zoom out',-1]]){const b=make('button','',step>0?'+':'−');b.setAttribute('aria-label',label);b.onclick=()=>{this.zoom=Math.max(10,Math.min(20,this.zoom+step));this.drawFlat();};controls.append(b);}this.host.append(controls);let drag;
@@ -48,7 +49,7 @@ export class CityMap {
     const labels=new Set(),labelBoxes=[];for(const f of this.roads.features){const p=f.properties;if(this.mask!=='source'&&p.status==='excluded')continue;const coords=f.geometry.coordinates;ctx.strokeStyle=p.status==='unsupported'?'#bb8b44':this.replay?'#c5d4c7':'#77a392';ctx.lineWidth=Math.min(10,Math.max(.5,(this.zoom-10)*.55));path(coords);ctx.stroke();if(this.zoom>=14&&!labels.has(p.name)&&p.name!=='Unnamed road'){const [x,y]=xy(coords[Math.floor(coords.length/2)]);const cell=`${Math.floor(x/120)},${Math.floor(y/40)}`;const box=[x-4,y-16,x+p.name.length*7+8,y+6];if(x>30&&x<w-70&&y>30&&y<h-20&&box[2]<w-10&&!labels.has(cell)&&!labelBoxes.some(b=>box[0]<b[2]&&box[2]>b[0]&&box[1]<b[3]&&box[3]>b[1])){ctx.font='12px sans-serif';ctx.lineWidth=3;ctx.strokeStyle='#fffdf4';ctx.strokeText(p.name,x,y);ctx.fillStyle='#4a6052';ctx.fillText(p.name,x,y);labels.add(p.name);labels.add(cell);labelBoxes.push(box);}}}
     for(const f of this.routes.features){path(f.geometry.coordinates);ctx.strokeStyle=f.properties.purpose==='passenger'?'#306ca3':f.properties.purpose==='returning'?'#b17530':'#69755a';ctx.lineWidth=3;ctx.stroke();}
     for(const p of this.mask==='scenario'?(this.scenario??[]):[]){const[x,y]=xy(p);ctx.fillStyle='#4d70a1';ctx.fillRect(x-2,y-2,4,4);}
-    for(const s of this.sites){const[x,y]=xy(s.coordinates);ctx.fillStyle='#ad4140';ctx.fillRect(x-13,y-13,26,26);ctx.fillStyle='white';ctx.font='bold 15px sans-serif';ctx.textAlign='center';ctx.fillText(s.id,x,y+5);ctx.textAlign='left';}
+    for(const s of this.sites){const[x,y]=xy(s.coordinates);ctx.fillStyle='#143c2b';ctx.fillRect(x-13,y-13,26,26);ctx.fillStyle='white';ctx.font='bold 15px sans-serif';ctx.textAlign='center';ctx.fillText(s.id,x,y+5);ctx.textAlign='left';}
     this.flatBackground??=document.createElement('canvas');this.flatBackground.width=this.canvas.width;this.flatBackground.height=this.canvas.height;this.flatBackground.getContext('2d').drawImage(this.canvas,0,0);}
     if(this.sample){const[x,y]=xy([this.sample[1],this.sample[2]]);ctx.save();ctx.translate(x,y);ctx.rotate(this.sample[3]*Math.PI/180);ctx.fillStyle='#24483d';ctx.fillRect(-8,-15,16,30);ctx.fillStyle='#fff8df';ctx.fillRect(-5,-9,10,9);ctx.restore();}
   }

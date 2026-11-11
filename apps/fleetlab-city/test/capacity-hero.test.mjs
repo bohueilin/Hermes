@@ -44,7 +44,7 @@ test('FL-A4 is eager at high priority only where capacity/visual.css lays the he
   assert.deepEqual(['loading','fetchpriority','decoding','width','height'].map(k=>img.getAttribute(k)),[loading,fetchpriority,'async','2048','1152'],`wide ${wide}`);
   a2.push(serialize(document.getElementById('enhancement-fleet-day')));
  },{[WIDE]:wide});
- assert.equal(a2[0],a2[1],'A2 is identical at every width');assert.match(a2[0],/loading="lazy" decoding="async"><\/div>/);
+ assert.equal(a2[0],a2[1],'A2 is identical at every width');assert.match(a2[0],/loading="eager" fetchpriority="high" decoding="async"><\/div>/);
 });
 
 test('the Capacity tint lives only in capacity/visual.css, above the hosted .enhancement-visual specificity',()=>{

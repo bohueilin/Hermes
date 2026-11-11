@@ -1,6 +1,7 @@
 // Shell tests of the Scale lab: the lab contract, the generic view, the route, the ladder chart and the copy rules.
 // Every lab in SCALE_LABS is held to the same checks, so a lab engineer adds no case here.
 import assert from 'node:assert/strict';
+import {UI_CLASS_REGISTRY} from './helpers/ui-class-registry.mjs';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {installFakeDom} from './helpers/fake-dom.mjs';
@@ -14,9 +15,9 @@ import {createStore,createInitialState} from '../src/ui/store.js';
 import {defaultScenario} from '../src/model/schema.js';
 import {moduleGraph} from '../tools/pack.mjs';
 import {fileURLToPath} from 'node:url';
-import vm from 'node:vm';
 import {buildHtml} from '../tools/pack.mjs';
 import {serialize} from './helpers/fake-dom.mjs';
+import {mountPackedPage} from './helpers/packed-page.mjs';
 import * as labels from '../src/ui/labels.js';
 import * as format from '../src/ui/format.js';
 import * as experiment from '../src/ui/experiment.js';
@@ -279,7 +280,9 @@ test('the route opens a lab without running it, refuses a lesson of another page
     studio.applyRoute('#/scale-lab');assert.equal(studio.element.getAttribute('data-page'),'scale');assert.equal(studio.scale.getState().lab,SCALE_LABS[0].id);
     assert.match(document.title,/^Scale lab · FleetLab/);
     for(const lab of SCALE_LABS){studio.applyRoute(`#/scale-lab?lesson=${lab.id}`);assert.equal(studio.scale.getState().lab,lab.id);assert.equal(studio.scale.getState().result,null);assert.equal(document.title,`${lab.title} · FleetLab by Hermes`);}
-    assert.equal(studio.element.querySelectorAll('.studio-header nav a').length,3);
+    const nav=studio.element.querySelectorAll('.studio-header nav a');
+    assert.deepEqual(nav.map(a=>a.textContent),['Home','Fleet day','Street lab','Explore','About & limits']);
+    assert.deepEqual(nav.map(a=>a.getAttribute('href')),['#/home','#/fleet-day','#/street-lab','#/catalog','#/approach']);
     studio.applyRoute('#/scale-lab?lesson=fleet-day');assert.equal(studio.element.getAttribute('data-page'),'error');assert.equal(studio.scale.element.hidden,true);
     studio.applyRoute('#/fleet-day?lesson=response-reserve');assert.equal(studio.element.getAttribute('data-page'),'error');
     for(const hash of ['#/scale-lab?lesson=missing','#/scale-lab?foo=1']){studio.applyRoute(hash);assert.equal(studio.element.getAttribute('data-page'),'error',hash);}
@@ -313,12 +316,12 @@ test('the ladder chart keeps the chart rules: one measure axis, a table twin, st
   }finally{restore();}
 });
 
-test('every class the view sets is defined and listed in the stylesheet header, and none of them moves',()=>{
+test('every class the view sets has a CSS selector, and none of them moves',()=>{
   const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8'),source=readFileSync(new URL('../src/ui/scale-lab.js',import.meta.url),'utf8');
   const classes=new Set([...source.matchAll(/class:'([^']+)'/g)].flatMap(m=>m[1].split(' ')).filter(c=>c.startsWith('scale-')));
-  const header=css.slice(0,css.indexOf('*/')),rules=css.slice(css.indexOf('*/'));
+  const rules=css.replace(/\/\*[\s\S]*?\*\//g,''),selectors=rules.match(/[^{}]+(?=\{)/g).join(' ');
   assert.ok(classes.size>=5,[...classes].join(','));
-  for(const name of classes){assert.match(rules,new RegExp(`\\.${name}(?![\\w-])`),`styles.css defines .${name}`);assert.match(header,new RegExp(`\\.${name}(?![\\w-])`),`the header lists .${name}`);}
+  for(const name of classes){assert.match(selectors,new RegExp(`\\.${name}(?![\\w-])`),`styles.css defines .${name}`);assert.ok(UI_CLASS_REGISTRY.includes(name),`curated UI registry includes .${name}`);}
   for(const block of rules.matchAll(/([^{}]*\.scale-[^{}]*)\{([^}]*)\}/g))assert.doesNotMatch(block[2],/transition|animation|will-change/,block[1].trim());
   assert.doesNotMatch(source,/#[0-9a-f]{3,8}\b/i,'colours come from the stylesheet tokens');
 });
@@ -428,12 +431,7 @@ test('the declared test says before any run that the interval label is nominal a
 });
 
 test('the packed page presses Run for every lab and records what the native module records (FLEET_PLAYGROUND_PERF=1)',{skip:process.env.FLEET_PLAYGROUND_PERF!=='1'&&'set FLEET_PLAYGROUND_PERF=1'},async()=>{
-  // The Fleet day engine clones its configuration, so the packed page needs structuredClone, as every browser gives it.
-  const context=vm.createContext({console,performance,setTimeout,clearTimeout,URL,URLSearchParams,Blob,structuredClone}),uninstall=installFakeDom(context),document=uninstall.dom.document;
-  const shell=document.createElement('div'),strip=document.createElement('div');shell.id='fleetlab-root';strip.id='fleetlab-teaching-strip';shell.append(strip);document.body.append(shell);
-  context.Worker=class{constructor(){queueMicrotask(()=>this.onmessage?.({data:{type:'ready'}}));}postMessage(){}terminate(){}};
-  const app=new vm.Script(/<script>\n([\s\S]*)\n<\/script>/.exec(buildHtml(fileURLToPath(new URL('../',import.meta.url))))[1]).runInContext(context);
-  await app.host.ready;
+  const {app,close}=await mountPackedPage(buildHtml(fileURLToPath(new URL('../',import.meta.url))));
   try{
     for(const lab of SCALE_LABS){
       app.studio.applyRoute(`#/scale-lab?lesson=${lab.id}`);
@@ -443,7 +441,7 @@ test('the packed page presses Run for every lab and records what the native modu
       assert.equal(scaleJson(JSON.parse(JSON.stringify(packed))),scaleJson(JSON.parse(JSON.stringify(native))),`${lab.id}: the packed record equals the native record`);
       assert.ok(root.querySelector('.fl-readout')&&root.querySelector('figure.fl-chart'));assert.equal(root.querySelector('[role="alert"]').hidden,true);
     }
-  }finally{app.destroy();uninstall();}
+  }finally{close();}
 });
 
 test('every press stays inside its run budget and names its controls from the allowed set',()=>{

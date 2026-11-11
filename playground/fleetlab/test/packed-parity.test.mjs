@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import vm from "node:vm";
 import { buildHtml, buildSite, bundle } from "../tools/pack.mjs";
-import { installFakeDom } from "./helpers/fake-dom.mjs";
+import { mountPackedPage } from "./helpers/packed-page.mjs";
 import { presetScenario, runThroughWorkerHandler } from "./helpers/model-payloads.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -55,32 +55,12 @@ test("packed offline worker matches native fixed-seed event digest, world digest
 });
 
 test("the actual stripped offline page initializes its studio on the fake DOM", async () => {
-  const context = vm.createContext({ console, performance, setTimeout, clearTimeout, URL, URLSearchParams, Blob, TextEncoder, TextDecoder, btoa, atob });
-  // Keep cloned JSON in the VM realm, as the real browser does.
-  context.structuredClone = new vm.Script("value => JSON.parse(JSON.stringify(value))").runInContext(context);
-  const uninstall = installFakeDom(context);
-  const document = uninstall.dom.document;
-  const shell = document.createElement("div");
-  shell.id = "fleetlab-root";
-  const strip = document.createElement("div");
-  strip.id = "fleetlab-teaching-strip";
-  shell.append(strip);
-  document.body.append(shell);
-  context.Worker = class {
-    constructor() { queueMicrotask(() => this.onmessage?.({ data: { type: "ready" } })); }
-    postMessage() {}
-    terminate() {}
-  };
-  let app;
+  const { app, document, close } = await mountPackedPage(html);
   try {
-    const script = /<script>\n([\s\S]*)\n<\/script>/.exec(html)[1];
-    app = new vm.Script(script).runInContext(context);
-    await app.host.ready;
     assert.ok(app.studio.element.isConnected);
     assert.ok(document.querySelectorAll("button").length > 10, "real studio controls mounted");
     assert.ok(app.studio.element.textContent.includes("FleetLab"));
   } finally {
-    app?.destroy();
-    uninstall();
+    close();
   }
 });

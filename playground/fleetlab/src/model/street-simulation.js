@@ -20,7 +20,8 @@ function validate(c,network){
 }
 
 /** Deterministic mesoscopic street experiment. Road queues, fleet state and demand are independent of presentation. */
-export function simulateStreets(input,network){
+// One step per 5-second tick, so a page can run the street day in slices; the direct call drains it.
+export function* streetSteps(input,network){
  const config={...defaultStreetConfig(),...input};validate(config,network);
  const c=config,step=5,end=c.duration_minutes*60,router=createStreetRouter(network),routeCache=new Map();
  const anchors=new Map(network.anchors.map(a=>[a.id,a])),nodes=new Map(network.nodes.map(n=>[n.id,n])),edges=new Map(network.edges.map(e=>[e.id,e]));
@@ -105,7 +106,7 @@ export function simulateStreets(input,network){
     const incoming=path.edge_ids.at(-1)??car.incoming;if(!freeRoute(origin.node,anchors.get(req.to).node,incoming).available)continue;
     req.assigned=now;req.state='assigned';car.request=req;event(car,`Assigned ${req.id}: ${origin.label} to ${anchors.get(req.to).label}`);launch(car,path,'pickup');break;}
   }
-  frames.push(snapshot());
+  frames.push(snapshot());yield;
  }
  const completed=requests.filter(r=>r.state==='completed'),boarded=requests.filter(r=>r.boarded!==null);
  const empty= cars.reduce((sum,car)=>sum+car.empty_m+(car.state==='pickup'?(q.position(car.journey_id)?.distance_m??0):0),0)/1000;
@@ -114,8 +115,11 @@ export function simulateStreets(input,network){
   destinations:['sfo','east-bay','local'].map(id=>{const group=requests.filter(r=>id==='local'?!['sfo','east-bay'].includes(r.to):r.to===id);return {id,requests:group.length,completed:group.filter(r=>r.state==='completed').length};})};
  return {version:'street-lab-v1',network_version:network.version,config,demand,incident,requests,routes,frames,summary,hotspots:[...hotspotStats.values()],vehicles:cars.map(({id,log})=>({id,log}))};
 }
-export function compareStreetPolicies(config,network){
- const baseline=simulateStreets({...config,policy:'free-flow'},network),candidate=simulateStreets({...config,policy:'queue-aware'},network),delta={};
+const drain=steps=>{for(;;){const s=steps.next();if(s.done)return s.value;}};
+export const simulateStreets=(input,network)=>drain(streetSteps(input,network));
+export function* streetComparisonSteps(config,network){
+ const baseline=yield* streetSteps({...config,policy:'free-flow'},network),candidate=yield* streetSteps({...config,policy:'queue-aware'},network),delta={};
  for(const key of ['completed','mean_pickup_minutes','mean_trip_minutes','empty_km','busy_vehicle_minutes','peak_queued','waiting','in_progress'])delta[key]=baseline.summary[key]===null||candidate.summary[key]===null?null:candidate.summary[key]-baseline.summary[key];
  return {baseline,candidate,delta};
 }
+export const compareStreetPolicies=(config,network)=>drain(streetComparisonSteps(config,network));

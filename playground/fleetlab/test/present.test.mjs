@@ -6,6 +6,7 @@
 // direction the pins do not carry (H-9).
 
 import assert from "node:assert/strict";
+import { UI_CLASS_REGISTRY } from "./helpers/ui-class-registry.mjs";
 import { readFileSync } from "node:fs";
 import { before, describe, test } from "node:test";
 
@@ -70,7 +71,7 @@ before(async () => {
  * fires (so a test moves the clock itself). `prepare` stands in for the app's two runs: it puts the real OPS-01 window
  * payload in the store and freezes the casebook's own spec, which is what the page has when Prepare lands.
  */
-function mount({ reduced = false } = {}) {
+function mount({ reduced = false, beforePrepare = async () => {} } = {}) {
   const uninstall = installFakeDom(globalThis, { media: { "(min-width: 1280px)": true, "(min-width: 768px)": true } });
   const doc = uninstall.dom.document;
   const ledger = doc.createElement("section");
@@ -101,6 +102,7 @@ function mount({ reduced = false } = {}) {
     scenarioOf,
     // What the page's own Prepare does: the casebook window at 5 seeds, then its frozen spec at its paired seeds.
     prepare: async () => {
+      await beforePrepare();
       store.dispatch({ type: "run/queued", id: "w", total: 5 });
       store.dispatch({ type: "run/done", id: "w", payload });
       const frozen = frozenExperiment({ presetId: PRESENT_PRESET_ID, replications: VERDICT_SEEDS });
@@ -272,6 +274,7 @@ describe("before the runs land", () => {
       assert.equal(ctx.find("present-depot-table").hidden, true);
       assert.equal(ctx.find("present-ticker").children.length, 0);
       assert.equal(ctx.find("present-prepare-status").textContent, PRESENT.prepareWait);
+      assert.equal(ctx.find("present-figures").hidden, true, "one preparation panel replaces repeated missing-value figures");
     } finally {
       ctx.cleanup();
     }
@@ -319,6 +322,30 @@ describe("before the runs land", () => {
       ctx.cleanup();
     }
   });
+});
+
+test('failed preparation is recoverable and never reveals a fabricated result',async()=>{
+ let fail=true;const ctx=mount({beforePrepare:async()=>{if(fail)throw Error('worker failed');}});
+ try{
+  ctx.present.open();await ctx.present.prepare({focus:false});
+  assert.equal(ctx.store.getState().present.prepared,false);
+  assert.match(ctx.find('present-prepare-status').textContent,/could not finish both runs/);
+  assert.equal(ctx.find('present-prepare').textContent,'Try preparing again');
+  assert.equal(ctx.find('present-figures').hidden,true);
+  fail=false;await ctx.present.prepare({focus:false});
+  assert.equal(ctx.store.getState().present.prepared,true);assert.equal(ctx.find('present-figures').hidden,false);
+ }finally{ctx.cleanup();}
+});
+
+test('route-entry completion after leaving never seeks, opens a drawer, plays or steals focus',async()=>{
+ let release;const blocked=new Promise(resolve=>{release=resolve;});const ctx=mount({beforePrepare:()=>blocked});
+ try{
+  ctx.present.open();const pending=ctx.present.prepare({focus:false});ctx.present.close();
+  const heading=ctx.doc.createElement('h1');heading.setAttribute('tabindex','-1');ctx.doc.body.appendChild(heading);heading.focus();
+  release();await pending;
+  assert.equal(ctx.store.getState().present.on,false);assert.equal(ctx.store.getState().playing,false);
+  assert.equal(ctx.store.getState().inspector,null);assert.equal(ctx.doc.activeElement,heading);
+ }finally{ctx.cleanup();}
 });
 
 describe("walking the beats", () => {
@@ -1010,13 +1037,13 @@ describe("copy and classes", () => {
     }
   });
 
-  test("every class the walkthrough sets is defined in styles.css, listed in its header inventory, and carries no motion", () => {
+  test("every class the walkthrough sets is defined by a CSS selector and carries no motion", () => {
     const classes = new Set([...SOURCE.matchAll(/fl-(?:ledger|ticker|rail|reading-card)[\w-]*/g)].map((m) => m[0]));
     assert.ok(classes.size >= 8, [...classes].join(","));
-    const header = CSS.slice(0, CSS.indexOf("*/"));
+    const selectorText = CSS.replace(/\/\*[\s\S]*?\*\//g, "").match(/[^{}]+(?=\{)/g).join(" ");
     for (const name of classes) {
-      assert.match(CSS, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
-      assert.match(header, new RegExp(`\\.${name}(?![\\w-])`), `the header inventory lists .${name}`);
+      assert.match(selectorText, new RegExp(`\\.${name}(?![\\w-])`), `styles.css defines .${name}`);
+      assert.ok(UI_CLASS_REGISTRY.includes(name), `curated UI registry includes .${name}`);
     }
     assert.ok(CSS.includes("/* The walkthrough"), "the walkthrough's rules say what they are for");
     // A beat change is instant, so no rule of the walkthrough or of the presenting grid may animate. Comments are

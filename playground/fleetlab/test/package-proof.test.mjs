@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 import { measureSiteOwnership, lessonNavigation } from "../tools/software-delivery-package.mjs";
 import { buildHtml, buildSite } from "../tools/pack.mjs";
+import { APP_MAX_BYTES } from "../tools/media.mjs";
 
 const source = fileURLToPath(new URL("../", import.meta.url));
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "fleetlab-package-test-")));
@@ -90,7 +91,8 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.counts.depot_route_local_bytes, measureSiteOwnership(files).depot_route_local_bytes);
   assert.ok(receipt.counts.depot_closure_bytes <= 786432 && receipt.counts.depot_route_local_bytes <= 524288);
   assert.ok(receipt.counts.package_metadata_bytes <= 57344 && receipt.counts.source_offer_extracted_bytes <= 5242880);
-  assert.ok(receipt.counts.offline_bytes <= 2571440);
+  assert.ok(receipt.counts.offline_bytes <= 2586822);
+  assert.equal(receipt.offline.reserved_bytes, APP_MAX_BYTES - readFileSync(offline).length);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
   const archive = result.files.get(receipt.source_offer.path);
@@ -128,9 +130,11 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
 test("the offline edition reproduces the approved catalog look_for bytes exactly", () => {
   // C2 amendment 1: ops-cases.js is bundled twice, so its byte delta counts twice and the offline edition moves less than the source.
   // Catalog look_for wave (2026-10-31, owner D2): re-pinned from the C2 pair (2566962, e49c0aba...) to the measured bytes and SHA-256.
+  // Wave 2C (2026-11-05, owner D1-D9 GO): recomputed from the reviewed implementation tree.
+  // Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then Street slicing and world reuse 1,469 B.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2568066);
-  assert.equal(hash(html), "5f2228206b89cdc1416bb5ce9305a3c2f3922c21c686384f188c9731e7b90e40");
+  assert.equal(Buffer.byteLength(html), 2586822);
+  assert.equal(hash(html), "85f824d5796a93136caa7d4573c6d710a218203d2757244c0b2d823bcf75a08a");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {
@@ -155,8 +159,11 @@ test("development measurement rejects altered site, offline bytes, extras and re
   writeFileSync(join(site, "network-flows/capacity/release.json"), canonical({ ...payload, release_digest: hash(canonical(payload)) }) + "\n");
   assert.throws(() => tool.measurePackageProof(options), /reproduc|differ|mismatch/i);
   writeMap(site, files);
-  writeFileSync(offline, `${buildHtml(source)}\n`);
+  const original=buildHtml(source);
+  const altered=Buffer.from(original);altered[0]^=1;writeFileSync(offline, altered);
   assert.throws(() => tool.measurePackageProof(options), /offline.*(?:reproduc|differ|mismatch)/i);
+  writeFileSync(offline, `${original}\n`);
+  assert.throws(() => tool.measurePackageProof(options), /file byte limit exceeded/);
 });
 
 test("release package binds every source and its executing proof tool to the exact commit", () => {

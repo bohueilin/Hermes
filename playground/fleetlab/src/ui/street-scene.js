@@ -49,8 +49,8 @@ export function createStreetScene({network,onSelect=()=>{},onEdgeSelect=()=>{},c
   if(lastStatic!==staticKey){
    lastStatic=staticKey;visibleEdges=network.edges.filter(e=>{const b=bounds.get(e.id),[x,y]=camera.target,r=camera.distance*1.5;return b.minX<=x+r&&b.maxX>=x-r&&b.minY<=y+r&&b.maxY>=y-r;});
    const [x,y]=camera.target,span=Math.max(2,camera.distance*3);staticMesh=[];
-   quad(staticMesh,[x-span,y-span,-.004],[x+span,y-span,-.004],[x+span,y+span,-.004],[x-span,y+span,-.004],'#eaf0ed');
-   append(staticMesh,buildRoadMesh(visibleEdges,.013,'#d7e0de',0));append(staticMesh,buildRoadMesh(visibleEdges,.007,'#ffffff',.001));
+   quad(staticMesh,[x-span,y-span,-.004],[x+span,y-span,-.004],[x+span,y+span,-.004],[x-span,y+span,-.004],'#e6f0e9');
+   append(staticMesh,buildRoadMesh(visibleEdges,.013,'#fafbf7',0));append(staticMesh,buildRoadMesh(visibleEdges,.009,'#526f62',.001));
   }
   const roadStates=new Map((frame?.roads??[]).map(e=>[e.id,e])),routeIds=new Set(run?.routes[selected?frame?.vehicles.find(v=>v.id===selected)?.route_id:null]?.edge_ids??[]);
   canvas.hidden=mode!=='3d';flat.style.display=mode==='flat'?'block':'none';
@@ -65,7 +65,7 @@ export function createStreetScene({network,onSelect=()=>{},onEdgeSelect=()=>{},c
     if(s?.queued){const p=mids.get(edge.id);box(mesh,p.x,p.y,.003,.009,.009,Math.min(.006,.001+s.queued*.00015),color);}
    }
   }
-  if(mode==='flat')for(const edge of visibleEdges){const s=roadStates.get(edge.id);flat.appendChild(svg('polyline',{points:edge.points.map(p=>{const xy=project(...p);return `${xy.x},${xy.y}`;}).join(' '),fill:'none',stroke:edge.id===selectedEdge?'#183e74':s?.spillback?'#bc5544':s?.queued?'#d59a42':routeIds.has(edge.id)?'#377dd7':'#bdcccb','stroke-width':s?.queued||routeIds.has(edge.id)?3:1.5}));}
+  if(mode==='flat')for(const edge of visibleEdges){const s=roadStates.get(edge.id);flat.appendChild(svg('polyline',{points:edge.points.map(p=>{const xy=project(...p);return `${xy.x},${xy.y}`;}).join(' '),fill:'none',stroke:edge.id===selectedEdge?'#183e74':s?.spillback?'#bc5544':s?.queued?'#d59a42':routeIds.has(edge.id)?'#377dd7':'#526f62','stroke-width':s?.queued||routeIds.has(edge.id)?3:1.5}));}
   hits=[];const carScale=Math.max(.0025,camera.distance*.01);
   for(const car of frame?.vehicles??[]){
    const p=positions.get(car.id),xy=project(p.x,p.y,carScale);if(!xy.visible||xy.x<0||xy.x>width||xy.y<0||xy.y>height)continue;
@@ -76,11 +76,11 @@ export function createStreetScene({network,onSelect=()=>{},onEdgeSelect=()=>{},c
   if(mode==='3d'){renderer.draw(mesh,matrix,Math.round(width),Math.round(height));canvas.setAttribute('data-renderer','webgl');}
   const candidates=[];
   if(camera.distance>6)for(const a of network.anchors)candidates.push({id:a.id,name:a.label,x:a.x,y:a.y,priority:100});
-  else for(const edge of visibleEdges){const p=mids.get(edge.id),s=roadStates.get(edge.id);candidates.push({id:edge.id,name:edge.name+(s?.queued?` · ${s.queued} queued`:''),x:p.x,y:p.y,priority:(edge.id===selectedEdge?200:0)+(s?.queued??0)+(edge.hotspot===focusSelect.value?3:0),base:edge.name});}
+  else for(const edge of visibleEdges){const p=mids.get(edge.id),s=roadStates.get(edge.id);if(camera.distance>1.2&&edge.id!==selectedEdge&&!s?.queued&&edge.hotspot!==focusSelect.value)continue;candidates.push({id:edge.id,name:edge.name+(s?.queued?` · ${s.queued} queued`:''),x:p.x,y:p.y,priority:(edge.id===selectedEdge?200:0)+(s?.queued??0)+(edge.hotspot===focusSelect.value?3:0),base:edge.name});}
   candidates.sort((a,b)=>b.priority-a.priority||Math.hypot(a.x-camera.target[0],a.y-camera.target[1])-Math.hypot(b.x-camera.target[0],b.y-camera.target[1]));
-  const occupied=[],names=new Set();let index=0;
-  for(const p of candidates){if(index>=labelNodes.length)break;if(names.has(p.base??p.name))continue;const xy=project(p.x,p.y,.009);const w=Math.min(190,p.name.length*6+18),h=23;
-   const rect={x:xy.x-w/2,y:xy.y-28,w,h};if(!xy.visible||rect.x<8||rect.y<8||rect.x+w>width-8||rect.y+h>height-8||occupied.some(a=>rect.x<a.x+a.w+8&&rect.x+w+8>a.x&&rect.y<a.y+a.h+6&&rect.y+h+6>a.y))continue;
+  const occupied=[],names=new Set(),labelLimit=camera.distance>1.2?6:camera.distance>.6?12:24;let index=0;
+  for(const p of candidates){if(index>=labelLimit)break;if(names.has(p.base??p.name))continue;const xy=project(p.x,p.y,.009);const w=p.name.length*8+18,h=23;
+   const rect={x:xy.x-w/2,y:xy.y-28,w,h};if(!xy.visible||rect.x<8||rect.y<8||rect.x+w>width-8||rect.y+h>height-8||occupied.some(a=>rect.x<a.x+a.w+12&&rect.x+w+12>a.x&&rect.y<a.y+a.h+8&&rect.y+h+8>a.y))continue;
    const n=labelNodes[index++];n.hidden=false;n.textContent=p.name;n.style.transform=`translate(${rect.x}px, ${rect.y}px)`;n.style.maxWidth=`${w}px`;occupied.push(rect);names.add(p.base??p.name);
   }
   for(;index<labelNodes.length;index++)labelNodes[index].hidden=true;

@@ -4,7 +4,9 @@ import {LESSON_FRAMES,SURFACE_FRAMES,frameView,glossaryView} from './teaching-fr
 import {teachingResult} from './teaching-projection.js';
 import {displayText,setBusy} from './display-text.js';
 import {STREET_NETWORK,streetMapDownload} from '../model/street-network.js';
-import {defaultStreetConfig,simulateStreets,compareStreetPolicies,STREET_PRESETS} from '../model/street-simulation.js';
+import {defaultStreetConfig,streetSteps,streetComparisonSteps,STREET_PRESETS} from '../model/street-simulation.js';
+import {runSliced,MAIN_SLICE_MS} from '../runtime/protocol.js';
+import {yieldToPage} from './scale-lab.js';
 import {createStreetScene} from './street-scene.js';
 import {modelHeader} from './model-identity.js';
 const eyebrow=text=>el('p',{class:'eyebrow'},text);
@@ -15,8 +17,8 @@ function download(name,data){const link=el('a',{href:'data:application/json;char
 
 export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>requestAnimationFrame(fn),cancelFrame=id=>cancelAnimationFrame(id),reducedMotion=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false}={}){
  let config=defaultStreetConfig(),result=null,comparison=null,time=0,playing=false,raf=null,lastTime=null,minuteCarry=0,stale=false,busy=false,destroyed=false,selected='AV-01',edgeId=null,lastDetails='',revision=0,runGeneration=0;
- let lesson=null,lessonEdited=false;const lessonFrame=el('div');
- function renderTeaching(){lessonFrame.replaceChildren(frameView(lesson?LESSON_FRAMES[lesson.id]:SURFACE_FRAMES.street,{title:lesson?.title??'Street lab',heading:'h1',edited:lessonEdited}));}
+ let lesson=null,lessonEdited=false;const lessonFrame=el('div'),lessonContext=el('details');
+ function renderTeaching(){const frame=frameView(lesson?LESSON_FRAMES[lesson.id]:SURFACE_FRAMES.street,{title:lesson?.title??'Street lab',heading:'h1',edited:lessonEdited});lessonContext.replaceChildren(el('summary',{},'Method, learning and limits'),...Array.from(frame.querySelector('.teaching-parts').children).slice(1));lessonFrame.replaceChildren(frame);}
  const streetVersion='street-lab-v1',identity=modelHeader('Street lab','OpenStreetMap San Francisco street extracts',streetVersion);
  const inputs=new Map(),anchors=new Map(network.anchors.map(a=>[a.id,a])),edges=new Map(network.edges.map(e=>[e.id,e]));
  const label=id=>anchors.get(id)?.label??id??'not available: between places';
@@ -58,7 +60,7 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  const resultHeading=el('h2',{tabindex:'-1'},'Result summary');
  const results=el('section',{class:'street-results'},[eyebrow('3 / READ THE TRADE-OFF'),resultHeading,el('p',{},'Run a scenario to see completed and unfinished journeys together.')]);
  const element=el('main',{class:'street-lab',id:'street-lab'},[
-  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),lessonFrame,runButton,glossaryView(),el('details',{},[el('summary',{},'Exact values'),identity.element])]),
+  el('section',{class:'street-intro'},[eyebrow('STREET LAB / SAN FRANCISCO'),lessonFrame,runButton,el('p',{class:'street-model-class'},'A mesoscopic block-queue spillback model on frozen OSM SF extracts, not lane-level microsimulation.'),lessonContext,glossaryView(),el('details',{},[el('summary',{},'Exact values'),identity.element])]),
   conceptPrimer('street'),
   presetRow,el('div',{class:'street-layout'},[settings,el('div',{class:'street-main'},[replay,inspect])]),results,
   el('section',{class:'street-learning'},[eyebrow('WHAT THIS MODEL HELPS YOU ASK'),el('h2',{},'Connect the street problem to an operating decision.'),el('div',{class:'street-learning-grid'},[
@@ -117,16 +119,17 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
   const edge=edges.get(car.edge_id??car.pending_edge_id),path=result.routes[car.route_id],names=path?path.edge_ids.map(id=>edges.get(id)?.name).filter((name,i,list)=>i===0||name!==list[i-1]):[];
   const events=result.vehicles.find(v=>v.id===selected).log.filter(e=>e.time<=time).slice(-4);
   vehicleDetail.replaceChildren(el('h3',{},`${car.id} · ${car.vehicle_type==='ojai'?'Ojai':'I-PACE'}`),el('p',{class:'street-car-state'},stateName(car.state)+(car.waiting?car.pending_edge_id?' · waiting to enter the road':' · road queue':'')),
-   el('p',{},car.request_id?`${car.request_id}: ${label(car.from)} → ${label(car.to)}`:`At ${label(car.anchor)} · ${car.completed} completed journeys`),
+   el('p',{},car.request_id?`Rider request ${car.request_id.replace(/^R/,'')}: ${label(car.from)} → ${label(car.to)}`:`At ${label(car.anchor)} · ${car.completed} completed journeys`),
    el('p',{},edge?`${edge.name} · ${fmt(edge.length_m,0)} m block · ${fmt(car.progress*100,0)}% along`:'At a modeled off-road anchor'),
    ...(car.edge_id&&car.waiting?[el('p',{},`${fmt(car.exit_wait_seconds/60)} min waiting after the uncongested exit time on this block. This is one part of the journey delay.`)]:[]),
+   el('details',{class:'street-raw-identifiers'},[el('summary',{},'Raw request and route identifiers'),el('p',{},`Request ${car.request_id??'none'} · Route ${car.route_id??'none'} · Edge ${car.edge_id??car.pending_edge_id??'none'}`)]),
    el('details',{},[el('summary',{},'Chosen road itinerary'),el('p',{},names.length?names.join(' → '):'No road leg in progress')]),
    el('ol',{class:'street-event-log'},events.map(e=>el('li',{},[el('time',{},clock(e.time,result.config.start_hour)),e.text]))));
   const top=[...f.roads].filter(e=>e.queued>0).sort((a,b)=>Number(b.spillback)-Number(a.spillback)||b.queued-a.queued).slice(0,5);
   queueList.replaceChildren(...top.map(s=>button(`${edges.get(s.id).name} · ${s.queued} queued${s.spillback?' · spillback':''}`,()=>scene.selectEdge(s.id))));
   if(!top.length)queueList.appendChild(el('p',{},'No vehicles queued on a road block at this step.'));
   const road=edges.get(edgeId),s=f.roads.find(e=>e.id===edgeId);
-  if(road)blockDetail.replaceChildren(el('h3',{},road.name),el('p',{},`${fmt(road.length_m,0)} m · ${road.lanes} modeled lane(s) · ${road.speed_kph} km/h free-flow input`),el('p',{},`${s?.occupancy??0} road vehicles occupying ${s?.storage??Math.max(1,Math.floor(road.length_m*Math.max(1,road.lanes)/7.5))} storage slots. ${s?.spillback?'The first car cannot enter the full downstream block.':'No downstream spillback at this step.'}`),el('p',{},`Directed edge ${road.from} → ${road.to}. ${road.signal?'Tagged signal; timing is synthetic.':'No signal represented at this exit.'}`));
+  if(road)blockDetail.replaceChildren(el('h3',{},road.name),el('p',{},`${fmt(road.length_m,0)} m · ${road.lanes} modeled lane(s) · ${road.speed_kph} km/h free-flow input`),el('p',{},`${s?.occupancy??0} road vehicles occupying ${s?.storage??Math.max(1,Math.floor(road.length_m*Math.max(1,road.lanes)/7.5))} storage slots. ${s?.spillback?'The first car cannot enter the full downstream block.':'No downstream spillback at this step.'}`),el('p',{},road.signal?'Tagged signal; timing is synthetic.':'No signal represented at this exit.'),el('details',{class:'street-raw-identifiers'},[el('summary',{},'Raw network identifiers'),el('p',{},`Edge ${road.id} · ${road.from} → ${road.to}`)]));
   else blockDetail.replaceChildren();
   if(road&&s)blockDetail.appendChild(el('p',{},`Front car exit wait: ${fmt(s.front_wait_seconds/60)} min beyond its uncongested exit time. This is a recorded model wait, not an estimated clearance time.`));
  }
@@ -155,11 +158,11 @@ export function createStreetLab({network=STREET_NETWORK,requestFrame=fn=>request
  async function run(compare=false){
   if(busy||destroyed)return;pause();busy=true;const captured={...config},version=revision,generation=++runGeneration;fields.disabled=true;setBusy(runButton,true);setBusy(compareButton,true);status.textContent=compare?'Comparing both policies on identical demand…':'Building the street experiment…';error.hidden=true;
   await new Promise(resolve=>setTimeout(resolve,0));
-  try{if(destroyed||generation!==runGeneration)return;const nextComparison=compare?compareStreetPolicies(captured,network):null,nextResult=nextComparison?.baseline??simulateStreets(captured,network);comparison=nextComparison;result=nextResult;time=0;stale=revision!==version;selected='AV-01';edgeId=null;lastDetails='';timeline.max=String(captured.duration_minutes*60);
+  try{if(destroyed||generation!==runGeneration)return;const outcome=await runSliced(compare?streetComparisonSteps(captured,network):streetSteps(captured,network),{get cancelled(){return destroyed||generation!==runGeneration;}},{now:()=>performance.now(),schedule:yieldToPage,budgetMs:MAIN_SLICE_MS}),nextComparison=compare?outcome:null,nextResult=compare?outcome.baseline:outcome;/* The results render gets a task of its own, not the last compute slice's. */await new Promise(yieldToPage);if(destroyed||generation!==runGeneration)return;comparison=nextComparison;result=nextResult;time=0;stale=revision!==version;selected='AV-01';edgeId=null;lastDetails='';timeline.max=String(captured.duration_minutes*60);
    vehicleSelect.replaceChildren(...result.frames[0].vehicles.map(v=>el('option',{value:v.id},v.id)));vehicleSelect.value=selected;comparisonView.hidden=!comparison;
    status.textContent=stale?'Settings changed; this is the previous run.':compare?'Comparison complete. Result summary ready. Press Play to replay either policy.':'Scenario complete. Result summary ready. Press Play to replay.';
    showResults();scene.focus(captured.hotspot);render();if(!element.hidden)resultHeading.focus({preventScroll:true});
-  }catch(e){error.textContent=displayText(e.message);error.hidden=false;status.textContent='Check the settings and try again.';}finally{if(generation===runGeneration){busy=false;fields.disabled=false;setBusy(runButton,false);setBusy(compareButton,false);}}
+  }catch(e){if(destroyed||generation!==runGeneration)return;error.textContent=displayText(e.message);error.hidden=false;status.textContent='Check the settings and try again.';}finally{if(generation===runGeneration){busy=false;fields.disabled=false;setBusy(runButton,false);setBusy(compareButton,false);}}
  }
  sync();render();
  return {setLesson(record){lesson=record;lessonEdited=false;result=null;comparison=null;stale=false;results.replaceChildren(resultHeading,el('p',{},'Run this lesson to read its results.'));element.querySelector('h1').textContent=record.title;status.textContent='Lesson loaded: '+record.title+'. Press Run when ready.';time=0;lastDetails='';render();renderTeaching();},element,run,setConfig,getSharedSetup,loadSharedSetup,pause,seek,refresh:()=>scene.refresh(),getState:()=>({run:result,time,playing,stale,busy}),destroy(){destroyed=true;pause();scene.destroy();}};

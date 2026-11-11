@@ -34,13 +34,15 @@ test('About artwork sits with the existing named users without replacing their c
  assert.ok(section.querySelector('img[src="/enhancement-media/FL-A1-people-between-rides.webp"]'));
  assert.equal(section.querySelector('.people-grid'),people);assert.equal(people.textContent,'Named user and existing limits');
 }));
-test('Fleet day uses the approved still after its title and never includes held V1',()=>fixture(()=>{
+test('Fleet day keeps the approved still after its decision and never includes held V1',()=>fixture(()=>{
  const title=element('h1',{},'Fleet day'),frame=element('section',{class:'teaching-frame'},[title,element('p',{},'Not calibrated.')]);
- const teaching=element('div',{class:'ops-teaching'},frame),intro=element('section',{class:'ops-intro'},teaching);
+ const teaching=element('div',{class:'ops-teaching'},frame),run=element('div',{class:'ops-run-line'},element('button',{},'Run fleet day'));
+ const intro=element('section',{class:'ops-intro'},[teaching,run]);
  document.body.appendChild(element('main',{class:'operations-lab'},intro));decorateVisitors(document);
- const hero=frame.querySelector('#enhancement-fleet-day');assert.ok(hero);assert.equal(title.nextSibling,hero);
+ const hero=intro.querySelector('#enhancement-fleet-day');assert.ok(hero);assert.equal(run.nextSibling,hero);
+ assert.equal(hero.parentNode,intro);assert.equal(frame.querySelector('#enhancement-fleet-day'),null);
  assert.equal(hero.querySelector('img').getAttribute('src'),'/enhancement-media/FL-A2-one-fleet-day-panorama.webp');
- assert.equal(hero.querySelector('video'),null);
+ assert.equal(intro.querySelector('video'),null);
  assert.equal(hero.querySelector('.enhancement-caption').textContent,'One fleet day: out at dawn, queued by midday, charging by night. Your run will write its own version.');
  assert.ok(frame.textContent.includes('Not calibrated.'));
 }));

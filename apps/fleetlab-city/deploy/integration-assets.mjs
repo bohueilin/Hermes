@@ -71,7 +71,7 @@ export function integratedRootFiles(teaching,{branded=false,rollback,source}={})
   '\n/downloads/teaching-package.json\n'+
   '  Content-Type: application/json\n';
  const result=new Map([...lessonNavigation(teaching),['index.html',index],
-  ['boot.js','import { mountCityEntry } from "./integration.mjs";\n'+teaching.get('boot.js')+'\nmountCityEntry();\n'],
+  ['boot.js','import "./brand.mjs";\nimport { mountCityEntry } from "./integration.mjs";\n'+teaching.get('boot.js')+'\nmountCityEntry();\n'],
   ['_headers',headers]]);
  if(branded){
   // The depot page is served without the site-wide analytics tag (engineering note BD-17); every other page keeps it.

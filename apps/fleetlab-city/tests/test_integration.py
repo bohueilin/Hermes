@@ -74,14 +74,14 @@ class IntegrationTest(unittest.TestCase):
         ):
             compare_client()
         # A difference outside the traced set must still be rejected by that guard.
-        drifted = {**baseline["files"], "src/model/world.js": {
-            **baseline["files"]["src/model/world.js"], "sha256": "0" * 64,
+        drifted = {**baseline["files"], "src/model/engine.js": {
+            **baseline["files"]["src/model/engine.js"], "sha256": "0" * 64,
         }}
         with (
             patch.object(integration.launch, "verify_legacy", return_value=drifted),
             patch.object(integration, "check_teaching_package", side_effect=ClientComparisonPassed),
             self.assertRaisesRegex(
-                ValueError, r"^undeclared teaching client change: src/model/world\.js$"
+                ValueError, r"^undeclared teaching client change: src/model/engine\.js$"
             ),
         ):
             compare_client()
@@ -154,10 +154,10 @@ class IntegrationTest(unittest.TestCase):
         routes = [{"id": "nf03", "paths": ["route.js", "_headers"]}]
         shared = ("enhancement-motion.mjs", "enhancement-media.mjs", "enhancement-media.css")
         self.assertTrue(set(shared) <= set(integration.brand.TEXT))
-        files = {"route.js": {"bytes": 557053}, "_headers": {"bytes": 0},
+        files = {"route.js": {"bytes": 595492}, "_headers": {"bytes": 0},
                  **{name: {"bytes": 1} for name in shared}}
         self.assertEqual(integration.final_route_counts(routes, files),
-                         {"nf03_closure_bytes": 557056})
+                         {"nf03_closure_bytes": 595495})
         files["enhancement-motion.mjs"]["bytes"] += 1
         with self.assertRaisesRegex(ValueError, "nf03.*closure.*budget"):
             integration.final_route_counts(routes, files)
@@ -727,14 +727,15 @@ class DesignRound3InventoryTests(unittest.TestCase):
     def test_reviewed_copy_modules_require_flow_update_and_other_modules_stay_blocked(self):
         paths = ["src/ui/labels.js", "src/ui/advanced-operations-view.js",
                  "src/ui/experiment.js", "src/ui/app.js", "src/ui/analytics.js",
-                 "src/ui/car-glyph.js", "src/ui/launch-view.js", "src/ui/street-scene.js"]
+                 "src/ui/car-glyph.js", "src/ui/launch-view.js", "src/ui/street-scene.js",
+                 "src/ui/model-identity.js", "src/ui/store.js"]
         before = {path: {"sha256": "old"} for path in paths}
         after = {path: {"sha256": "new"} for path in paths}
         self.assertEqual(integration.check_preservation(before, after, True, True), sorted(paths))
         with self.assertRaises(ValueError):
             integration.check_preservation(before, after, True, False)
-        before["src/model/world.js"] = {"sha256": "old"}
-        after["src/model/world.js"] = {"sha256": "new"}
+        before["src/model/engine.js"] = {"sha256": "old"}
+        after["src/model/engine.js"] = {"sha256": "new"}
         with self.assertRaises(ValueError):
             integration.check_preservation(before, after, True, True)
 

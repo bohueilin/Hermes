@@ -54,6 +54,16 @@ test('local and global pause stop elapsed time; resuming requires a user gesture
  x.pause.click();assert.equal(x.frames.pending,0);x.document.documentElement.dataset.visitorMotion='running';x.mutate();assert.equal(x.frames.pending,0);
  x.pause.click();assert.equal(x.frames.pending,1);x.frames.flush(6000);x.frames.flush(8000);assert.equal(x.frames.pending,0);
 });
+test('a playing explainer scrolled out of view stops requesting frames and resumes where it left off',()=>{
+ const x=setup('deadhead'),views=[];
+ x.window.IntersectionObserver=class{constructor(fn){this.fn=fn;this.active=false;views.push(this);}observe(){this.active=true;}disconnect(){this.active=false;}};
+ start(x);x.frames.flush(4000);assert.equal(x.root.getAttribute('data-total-distance'),'25');
+ views[0].fn([{isIntersecting:false}]);x.frames.flush(5000);
+ assert.equal(x.frames.pending,0);assert.equal(x.root.getAttribute('data-explainer-state'),'playing');assert.equal(x.root.getAttribute('data-total-distance'),'25');
+ views[0].fn([{isIntersecting:true}]);assert.equal(x.frames.pending,1);
+ x.frames.flush(60000);x.frames.flush(64000);assert.equal(x.root.getAttribute('data-total-distance'),'50');
+ x.frames.flush(80000);assert.equal(x.root.getAttribute('data-explainer-state'),'complete');assert.equal(views.filter(v=>v.active).length,0);
+});
 test('system or application reduced motion shows final immediately, including mid-flight changes',()=>{
  const query='(prefers-reduced-motion: reduce)',x=setup('deadhead',{media:{[query]:true}});x.replay.click();assert.equal(x.frames.pending,0);assert.equal(x.root.getAttribute('data-total-distance'),'100');
  x.media.set(query,false);start(x);x.frames.flush(1000);x.media.set(query,true);assert.equal(x.frames.pending,0);assert.equal(x.root.getAttribute('data-total-distance'),'100');

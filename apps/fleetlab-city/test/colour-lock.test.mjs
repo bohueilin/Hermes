@@ -5,6 +5,8 @@ import {colour,isWarm,readSources,scanSources,snapshot,format} from './colour-sc
 
 // Owner rule: amber and terracotta never mark a new interactive state or warning. Every warm use at the
 // Step A base is grandfathered in the baseline; the test fails only on additions, and removals are logged.
+// Owner-authorized Wave 3.5 exception: the two operations-3d queue marks use #a87560,
+// replacing the retired #bd9277 baseline allowance; all other warm additions still fail.
 // Limitation: a script key is only 'file | literal' and identifiers are not followed, so a new state that reuses
 // an existing warm constant adds no literal and passes, and a count freed by a removal can be reused in that file.
 const baselineText=readFileSync(new URL('./fixtures/warm-colour-baseline.json',import.meta.url),'utf8');

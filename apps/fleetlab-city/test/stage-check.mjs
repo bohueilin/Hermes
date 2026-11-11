@@ -5,18 +5,21 @@ import {readFileSync,realpathSync} from 'node:fs';
 import {join} from 'node:path';
 import {isDeepStrictEqual,parseArgs} from 'node:util';
 
-export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529',city_base:'4fa335d226090aae63350a50f3af481d91df3f16d920ecacb22828d0b16c2550',
+export const INPUT_DIGESTS={legacy:'15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529',city_base:'1d76e6af7628fe030db02de2817907f63cb4f3ada4ef00d2871b983d44c4ef63',
  city_source_offer:'1bf428531ba2d645054abae69b400e061d0bc742f912959a9e57f4d48e44e734',readback:'708659b40227369973cca941c69c098cb059c1dd2cc375d0d0203d56cd903d99'};
 // Sidecars record the Node version string and the offer is gzipped by Node's own zlib, so the build runtime is part of every figure.
 export const RUNTIME={node:'v22.23.4',python:'3.11.15'};
 export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
-export const OFFLINE_AFTER={bytes:2568066,sha256:'5f2228206b89cdc1416bb5ce9305a3c2f3922c21c686384f188c9731e7b90e40'};
+// Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
+// Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then the Street slicing and world reuse 1,469 B, to the offline edition.
+export const OFFLINE_AFTER={bytes:2586822,sha256:'85f824d5796a93136caa7d4573c6d710a218203d2757244c0b2d823bcf75a08a'};
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
-export const BOUNDS={nf03_closure_bytes:541729,nf04_closure_bytes:225430,delivery_order_closure_bytes:229159,r1_closure_bytes:200443,r3_closure_bytes:156487,depot_closure_bytes:515519,
- emitted_text_bytes:3577691,integration_text_bytes:133152,integration_source_bytes:397274,source_offer_extracted_bytes:4104316,source_offer_compressed_bytes:1155879,
- package_metadata_bytes:45385,non_city_bytes:16344242};
+// Perf waves (2026-11-09 and 11-10, owner): every affected ceiling re-pinned to the exact measured stage, no spare bytes.
+export const BOUNDS={nf03_closure_bytes:595495,nf04_closure_bytes:276879,delivery_order_closure_bytes:282003,r1_closure_bytes:253367,r3_closure_bytes:208786,depot_closure_bytes:568685,
+ emitted_text_bytes:3648910,integration_text_bytes:184106,integration_source_bytes:445023,source_offer_extracted_bytes:4160569,source_offer_compressed_bytes:1172318,
+ package_metadata_bytes:45385,non_city_bytes:16453825};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,

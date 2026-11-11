@@ -1,15 +1,20 @@
 import {QUESTION_FAMILIES} from './visitor-families.mjs';
 import {decorateConceptMedia} from './enhancement-media.mjs';
 
-// Presentation and navigation only. Existing lessons own their controls, results and playback.
-// Same refusals as src/ui/dom.js setAttr.
-export function node(doc,tag,attrs={},children=[]){
- const n=doc.createElement(tag);
- for(const [key,value] of Object.entries(attrs)){if(/^on/i.test(key)||/^(href|src)$/i.test(key)&&/^(javascript|data):/i.test(String(value).replace(/[\0- ]/g,'')))throw Error(`unsafe attribute ${key}`);n.setAttribute(key,value);}
+
+
+export function node(doc,tag,attrs={},children=[],namespace=null){
+ const n=namespace?doc.createElementNS(namespace,tag):doc.createElement(tag);
+ for(const [key,value] of Object.entries(attrs)){if(/^on/i.test(key)||/^(href|src|xlink:href)$/i.test(key)&&/^(javascript|data):/i.test(String(value).replace(/[\0- ]/g,'')))throw Error(`unsafe attribute ${key}`);n.setAttribute(key,value);}
  for(const child of [children].flat())if(child!=null)n.appendChild(typeof child==='string'?doc.createTextNode(child):child);
  return n;
 }
-// Editorial context only; these records never enter model inputs, results or verifiers.
+// A hidden studio route fetches no image: its eager images wait as lazy, marked data-eager, until the route is shown.
+export function syncRouteImages(doc){
+ for(const img of doc.querySelectorAll('img:not([loading="lazy"])'))if(img.closest('[hidden]')){img.setAttribute('data-eager','');img.setAttribute('loading','lazy');}
+ for(const img of doc.querySelectorAll('img[data-eager]'))if(!img.closest('[hidden]')){img.removeAttribute('data-eager');img.setAttribute('loading','eager');}
+}
+
 const FIELD_NOTES={
 rebalancing:['An MIT study of Waymo’s California filings found that 43–45% of miles were driven without passengers from mid-2025 through December 2025. This includes travel to pickups as well as repositioning.','MIT researcher · Findings, May 2026','https://doi.org/10.32866/001c.161870'],
 dispatch:['In three weeks of April 2026 checks in Austin, Reuters found Tesla Robotaxi wait times above 15 minutes about half the time and no cars available in 27% of checks.','Reuters · May 2026 (syndicated)','https://www.investing.com/news/stock-market-news/teslas-robotaxi-rollout-features-texassized-wait-times-4679470'],
@@ -39,8 +44,8 @@ const diagram=(file,alt)=>el('figure',{class:'visitor-diagram'},[el('img',{src:'
 const flow=doc.querySelector('.flow-hero');
 if(flow&&!flow.hasAttribute('data-diagram-observed')){
  flow.setAttribute('data-diagram-observed','');
- const draw=()=>{const question=flow.querySelector('.flow-question');if(!question||question.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');question.insertBefore(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'),question.querySelector(crossed?'.flow-definition':'.flow-lede'));};
- draw();new MutationObserver(draw).observe(flow,{childList:true});
+ const draw=()=>{for(const cell of flow.querySelectorAll('.flow-setup-table th,.flow-setup-table td')){const before=cell.textContent,after=before==='Due'?'Due (min)':before==='After upload'?'Local step':before==='Already at target'?'At target':before.replace(/^due at minute ([0-9.]+)$/,'$1').replace(/^([0-9.]+) min local step$/,'$1 min');if(after!==before)cell.textContent=after;}const question=flow.querySelector('.flow-question');if(!question||flow.querySelector('.visitor-diagram'))return;const crossed=flow.querySelector('.lab-chooser a[aria-current="page"]')?.getAttribute('href')?.includes('crossed-priorities');flow.appendChild(diagram(crossed?'D-02-crossed-priorities.webp':'D-01-depot-scenario.webp',crossed?'Four pods with mismatched upload sizes and deadlines sharing one link.':'Two autonomous pods sharing one network link, each with a deadline.'));};
+ draw();new MutationObserver(draw).observe(flow,{childList:true,subtree:true});
 }
 const dispatch=doc.querySelector('.bench>#chapter-copy');
 if(dispatch&&!doc.querySelector('.dispatch-concept')){const figure=diagram('D-05-opportunity-cost.webp','Dispatching the car now strands the next rider.');figure.classList.add('dispatch-concept');figure.querySelector('img').setAttribute('loading','lazy');dispatch.parentNode.insertBefore(figure,dispatch.nextSibling);}
@@ -48,7 +53,7 @@ const staffing=doc.querySelector('#staffing-help')?.parentNode;
 if(staffing&&!staffing.querySelector('.visitor-diagram')){staffing.classList.add('visitor-staffing');const figure=diagram('D-03-staffing-queue.webp','Pods queued at service bays; one bay works, one waits for a worker.');figure.querySelector('img').setAttribute('loading','lazy');staffing.insertBefore(figure,staffing.firstChild.nextSibling);}
 const art=(file,alt='',className='visitor-tile-art')=>el('img',{src:'/tiles/'+file,alt,class:className,width:'1600',height:'1600',loading:'lazy',decoding:'async'});
 const text=(selector,value)=>{const n=doc.querySelector(selector);if(n)n.textContent=value;};
-const tour=()=>el('section',{class:'visitor-tour'},[el('h2',{},'The 15-minute tour'),el('ol',{},[['Walkthrough','/#/walkthrough'],['Dispatch lesson','/network-flows/dispatch/'],['City Explorer notebook','/city-explorer/#compare']].map(([title,href])=>el('li',{},el('a',{href},title+' →'))))]);
+const tour=()=>el('section',{class:'visitor-tour'},[el('h2',{},'The 15-minute tour'),el('p',{},'After the 3-minute starter, take five minutes per stop.'),el('ol',{},[['Walkthrough','/#/walkthrough','You leave knowing how to change one assumption and read the result.'],['Dispatch lesson','/network-flows/dispatch/','You leave knowing why the nearest available car can carry an opportunity cost.'],['City Explorer notebook','/city-explorer/#compare','You leave knowing how a second depot changes this recorded synthetic study.']].map(([title,href,outcome])=>el('li',{},[el('a',{href},title+' · 5 min →'),el('p',{},outcome)]))),el('p',{class:'visitor-tour-finish'},'Finish: what would you test on Monday, which population would you count, and what evidence would change your mind?')]);
 text('#limits-view a[href="/city-explorer/sources/"]','Visit the map sources page for databases, captured sources, code and licenses →');
 const paired=doc.querySelector('#study-help');if(paired&&!doc.getElementById('visitor-paired'))paired.parentNode.appendChild(el('p',{id:'visitor-paired'},'A paired repeat compares configurations using the same seed, vehicle starting positions and rider requests.'));
 const home=doc.querySelector('.studio-overview');
@@ -58,7 +63,7 @@ if(home&&!doc.getElementById('visitor-purpose')){
    el('p',{class:'visitor-kicker'},'BO-HUEI LIN’S INDEPENDENT LEARNING PROJECT'),
    el('h1',{id:'visitor-purpose-title'},'Explore the work between the rides.'),
    el('p',{class:'visitor-byline'},'I’m building this project to learn how autonomous fleets work—and to share what each experiment teaches us.'),
-   el('p',{class:'visitor-lede'},'An autonomous car needs more than a charged battery. It needs time, data and a place to get ready. FleetLab makes those hidden decisions visible through small, interactive simulations — the same tradeoffs Waymo, Tesla and Zoox wrestle with at fleet scale.'),
+   el('p',{class:'visitor-lede'},'An autonomous car needs more than a charged battery. It needs time, data and a place to get ready. FleetLab makes those hidden decisions visible through small, interactive simulations — the same tradeoffs Waymo, Zoox and large autonomous fleet operators wrestle with.'),
    el('a',{class:'design-primary visitor-first-action',href:'/#/depot-flow-lab?lesson=two-vehicles'},'Start with a 3-minute lesson →'),
   ]),
   el('ol',{class:'visitor-steps','aria-label':'How to learn with FleetLab'},[
@@ -68,7 +73,9 @@ if(home&&!doc.getElementById('visitor-purpose')){
   ].map(([num,title,copy])=>el('li',{},[el('span',{'aria-hidden':'true'},num),el('div',{},[el('h2',{},title),el('p',{},copy)])]))),
  ]);
  home.insertBefore(intro,home.firstChild);
+ intro.firstChild.insertBefore(intro.querySelector('.visitor-byline'),intro.querySelector('.visitor-first-action').nextSibling);
  intro.firstChild.appendChild(tour());
+ const image=home.querySelector('.design-readiness-image'),steps=intro.querySelector('.visitor-steps');if(image){intro.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));home.insertBefore(steps,intro.nextSibling);}
  const filmTitle=home.querySelector('.film-copy h1');
  if(filmTitle){const h=el('h2',{class:'visitor-film-title'},'First, picture the work between rides.');filmTitle.parentNode.insertBefore(h,filmTitle);filmTitle.remove();}
  home.querySelector('.film-copy .eyebrow')?.remove();
@@ -78,13 +85,27 @@ if(home&&!doc.getElementById('visitor-purpose')){
  text('.design-art-description','Why is a fully charged vehicle still waiting? Follow the work that must finish before its next ride.');
  text('.start-points h2','Where would you like to explore next?');
  const startTiles=[['T-01-fleet-day.webp','Concept vehicle with daily demand waves.'],['T-02-sf-study.webp','Two fictional depot locations on an illustrated city map.'],['T-03-street-lab.webp','Three white pods queued on a curved clay street.']];
- home.querySelectorAll('.start-card').forEach((card,i)=>{if(startTiles[i]){card.classList.add('visitor-start-card');card.insertBefore(art(...startTiles[i]),card.firstChild);}});
+ home.querySelectorAll('.start-card').forEach((card,i)=>{if(startTiles[i]){card.classList.add('visitor-start-card');card.insertBefore(art(...startTiles[i]),card.querySelector('a,.city-entry-actions'));}});
  const pathTiles=['T-04-shared-resources.webp','T-05-rider-service.webp','T-06-model-limits.webp'];
  home.querySelectorAll('.learning-path-grid article').forEach((card,i)=>{
   if(!pathTiles[i])return;card.classList.add('visitor-learning-card');card.querySelector('svg')?.remove();card.insertBefore(art(pathTiles[i]),card.firstChild);
  });
  const credit=el('p',{class:'visitor-illustration-note'},'Illustrations introduce the questions. The lessons show the model’s results and limits.');
  home.querySelector('.start-points')?.appendChild(credit);
+ const insights=el('section',{id:'visitor-insights',class:'home-learning-path','aria-labelledby':'visitor-insights-title'},[
+  el('h2',{id:'visitor-insights-title'},'Five bounded lessons'),el('p',{},'Existing scenario checks, not new runs. Links open setups; run or compare in the lesson.'),
+  el('div',{class:'start-grid'},[
+   ['depot-flow-lab','two-vehicles','Order changes readiness','Default two-vehicle case: equal share and deadline first ready both on time; FIFO readies one. Vehicle A is one minute later.','Synthetic fixed tasks; size and deadline effects overlap.'],
+   ['fleet-day','staffing-readiness','An empty bay still needs a worker','The staffing fixture serves more trips with one extra worker; one extra bay leaves metrics unchanged.','One seed; serial work without shifts. Run fleet day, then compare staffing and bays.'],
+   ['experiments','UC-03','Less waiting can hide lost riders','UC-03 improves wait p90 but returns HOLD: more riders go unserved.','20 paired seeds on matched demand; check the counted population.'],
+   ['experiments','UC-08a','More bays may leave rider wait unchanged','UC-08a adds two SF-1 bays; rider wait stays within the declared margin.','20 paired seeds; a local capacity change is not a fleet-wide gain.'],
+   ['experiments','L2a','A guardrail can change the decision','L2a and L2b use the same arms. Adding the bay-wait guardrail changes RUN_MORE_EXPERIMENTS to HOLD.','Primary result remains INCONCLUSIVE; no deployment authority.','L2b'],
+  ].map(([route,id,title,finding,limit,also])=>el('article',{class:'start-card'},[
+   el('h3',{},title),el('p',{},finding),el('p',{},limit),...[id,also].filter(Boolean).map(lesson=>el('a',{class:'studio-button',href:`/#/${route}?lesson=${lesson}`},also?`Open ${lesson} →`:'Open setup →')),
+  ]))),
+ ]);
+ home.insertBefore(insights,home.querySelector('.home-learning-path'));
+
 }
 const catalog=doc.querySelector('.simulation-catalog');
 if(catalog&&!doc.getElementById('visitor-families')){
@@ -94,12 +115,13 @@ if(catalog&&!doc.getElementById('visitor-families')){
  const resultTitle=catalog.querySelector('.catalog-library-title');
  const results=el('details',{class:'visitor-library',id:'visitor-library'});
  results.appendChild(el('summary',{},'Browse the lesson library'));
- // Move the existing controls and result nodes together; their listeners and state stay owned by the catalogue.
+
  if(resultTitle){let part=resultTitle;while(part){const next=part.nextSibling;results.appendChild(part);if(part.classList.contains('catalog-grid'))break;part=next;}}
- const buttons=QUESTION_FAMILIES.map(f=>{
+ const buttons=QUESTION_FAMILIES.map((f,index)=>{
   const b=el('button',{type:'button',class:'visitor-family','data-family':f.id,'aria-pressed':'false','aria-controls':'visitor-library'},[
-   art(f.tile),el('span',{class:'visitor-family-title'},f.title),el('span',{class:'visitor-family-question'},f.question),el('span',{class:'visitor-family-count'},`${f.lessons.length} lessons`),
+   el('span',{class:'visitor-family-title'},f.title),el('span',{class:'visitor-family-question'},f.question),art(f.tile),el('span',{class:'visitor-family-count'},`${f.lessons.length} lessons`),
   ]);
+  if(index<3)b.querySelector('img').setAttribute('loading','eager');
   b.addEventListener('click',()=>{
    const wasSelected=b.getAttribute('aria-pressed')==='true';select(wasSelected?null:f);
    results.open=true;
@@ -139,7 +161,7 @@ if(shift&&timeline&&!doc.querySelector('.visitor-shift-preview')){
  preview.appendChild(el('p',{class:'visitor-hold-key'},[el('span',{'aria-hidden':'true',class:'visitor-held-dot'},'● ━━━ ●'), 'Each dot is a recorded position. The map holds it until the next 15-second sample. No interpolation; gaps stop playback.']));
  timeline.parentNode.insertBefore(preview,timeline);
 }
-// User-approved correction: concept artwork motion only, with no fabricated results or replay.
+
 for(const [selector,kind] of [
  ['.r1-hero','rebalancing'],['.delivery-hero','delivery'],['#order-root .hero','order'],
 ]){
@@ -167,14 +189,18 @@ if(welcome&&!doc.getElementById('visitor-city-path')){
  const comparison=welcome.querySelector('.learning-insight');
  welcome.insertBefore(ribbon,comparison?.nextSibling??null);
 }
+for(const hero of doc.querySelectorAll('.visitor-purpose,.ops-intro,.street-intro,.catalog-intro,.approach-intro'))hero.classList.add('lab-hero');
+for(const [selector,file] of [['.street-intro','T-03-street-lab.webp'],['.catalog-intro','T-04-shared-resources.webp'],['.approach-intro','T-06-model-limits.webp']]){const hero=doc.querySelector(selector);if(hero&&!hero.querySelector('.visitor-hero-art')){if(selector!=='.street-intro'){const link=el('a',{class:'design-primary',href:'/#/catalog'},'Explore the questions ↓');if(selector==='.catalog-intro')link.addEventListener('click',e=>{e.preventDefault();doc.getElementById('visitor-families')?.scrollIntoView({block:'start'});});hero.insertBefore(link,hero.querySelector('.hero-lede')?.nextSibling??null);}const image=art(file);image.setAttribute('loading','eager');image.setAttribute('fetchpriority','high');hero.appendChild(el('figure',{class:'visitor-hero-art'},[image,el('figcaption',{},'Concept illustration · not simulation output')]));if(selector==='.street-intro'){const copy=el('div',{class:'visitor-street-copy'});for(const child of [...hero.children])if(!child.classList.contains('visitor-hero-art'))copy.appendChild(child);hero.insertBefore(copy,hero.firstChild);}}}
 if(doc.defaultView?.requestAnimationFrame&&typeof doc.defaultView.MutationObserver==='function')installVisualMotion(doc);
+const motionControl=doc.querySelector('.visitor-motion-control'),footer=doc.querySelector('.studio-header,header.masthead')??doc.querySelector('footer');
+if(motionControl&&footer&&motionControl.parentNode!==footer)footer.appendChild(motionControl);
 text('.approach-intro .hero-lede','FleetLab is my independent learning project about autonomous fleet operations. I build small simulations to ask better questions about charging, depot work, data and rider service. Each lesson lets you change an assumption, see a trade-off and inspect the limits.');
 const about=doc.querySelector('.approach-intro .hero-lede');
 if(about&&!doc.getElementById('visitor-founder'))about.parentNode.insertBefore(el('section',{id:'visitor-founder','aria-labelledby':'visitor-founder-title'},[
  el('h2',{id:'visitor-founder-title'},'Why I built this'),
  el('p',{},"I'm Bo-Huei Lin. I spent the last 19+ years moving from software engineering into product leadership across Cisco, Amazon Alexa, Riot Games, and Meta, building across consumer devices, smart wearables, and large-scale platforms. The common thread in my work has always been operational reality at scale: designing systems that don't just work in the lab, but hold up when the edge cases hit simultaneously in production. Autonomous fleets take that software and hardware complexity into the physical world—where charging, turnaround, routing, and fleet-wide software updates directly dictate unit economics and passenger safety every single day."),
  el('p',{},"I built FleetLab to learn how that works — and to show my work. Every simulation here is synthetic and labeled as such, because I'd rather be honest about what I don't know than impressive about what I can't prove."),
-]),about.nextSibling);
+]),about.parentNode.querySelector('.design-primary')?.nextSibling??about.nextSibling);
 if(about&&!doc.getElementById('visitor-presenting'))about.parentNode.parentNode.insertBefore(el('section',{id:'visitor-presenting',class:'approach-case','aria-label':'The 15-minute tour'},[
  tour(),el('p',{},'Read the results shown in the selected run. These are synthetic teaching examples, not operator performance.'),
 ]),about.parentNode.nextSibling);
@@ -187,11 +213,15 @@ for(const pairs of doc.querySelectorAll('#pair-rows,#pair-story'))if(!pairObserv
  const fix=()=>{for(const cell of pairs.id==='pair-story'?[pairs]:pairs.querySelectorAll('.pair-lesson')){const before=cell.textContent,after=before.replace(/Two depots completed 1 (more|fewer) trips,/, 'Two depots completed 1 $1 trip,');if(before!==after)cell.textContent=after;}};
  fix();new MutationObserver(fix).observe(pairs,{childList:true,subtree:true});pairObservers.add(pairs);
 }
+for(const target of doc.querySelectorAll('.studio-overview,.operations-lab,.studio-approach'))if(!target.querySelector('.visitor-outside-model'))target.appendChild(el('aside',{class:'visitor-outside-model','aria-label':'Outside these simulations'},[
+ el('h2',{},'Outside these simulations'),el('p',{},'Safety Case & ODD Qualification: these runs establish neither safety nor operating permission. Remote Assistance (Tele-Ops): remote staffing and escalation are not modeled. DC Fast-Charge Taper: simplified charging does not capture the full battery-dependent power curve. Unit Economics: time and capacity tradeoffs are not a profit model.'),
+]));
 decorateFieldNotes(doc);
 decorateConceptMedia(doc,node);
+syncRouteImages(doc);
 }
 
-// Only presentation is animated. No callback can run a model, accept an order or advance replay.
+
 const motionControllers=new WeakMap(),animatedOutcomes=new WeakSet();
 export function animateOutcomeCounts(root,{request,cancel,allowed,now=()=>performance.now()}={}){
 if(animatedOutcomes.has(root)||root.getAttribute('data-result-accepted')!=='true'||root.getAttribute('data-stale')==='true')return ()=>{};
@@ -203,24 +233,24 @@ for(const row of rows){
  if(!Number.isSafeInteger(final)||final<0)continue;
  const exact=row.textContent;row.setAttribute('aria-label',exact);
  const display=row.ownerDocument.createElement('span');display.setAttribute('aria-hidden','true');
- const label=exact.slice(0,exact.lastIndexOf(':')+1);display.textContent=exact;
- const swatch=row.querySelector('.request-swatch');row.replaceChildren(...(swatch?[swatch]:[]),display);jobs.push({display,label,final});
+ display.textContent=exact;
+ const swatch=row.querySelector('.request-swatch');row.replaceChildren(...(swatch?[swatch]:[]),display);jobs.push({display,exact});
 }
 if(!jobs.length)return ()=>{};
 const token=root.ownerDocument.defaultView?.getComputedStyle?.(root).getPropertyValue('--motion-count').trim(),match=token?.match(/^(\d+(?:\.\d+)?)(ms|s)$/),duration=match&&Number(match[1])>0?Number(match[1])*(match[2]==='s'?1000:1):1200;
 let id=null,stopped=false;const start=now();
-const finish=()=>{stopped=true;if(id!==null)cancel(id);for(const j of jobs)j.display.textContent=`${j.label} ${j.final}`;root.classList.remove('visitor-count-reveal');root.style.removeProperty('--count-progress');};
-const step=t=>{if(stopped)return;if(!root.isConnected||root.closest('[hidden]')||root.getAttribute('data-stale')==='true'||!allowed()){finish();return;}const p=Math.min(1,Math.max(0,(t-start)/duration)),eased=1-(1-p)**3;root.style.setProperty('--count-progress',String(eased));for(const j of jobs)j.display.textContent=`${j.label} ${Math.floor(j.final*eased)}`;if(p<1)id=request(step);else finish();};
-root.classList.add('visitor-count-reveal');root.style.setProperty('--count-progress','0');for(const j of jobs)j.display.textContent=`${j.label} 0`;id=request(step);return finish;
+const finish=()=>{stopped=true;if(id!==null)cancel(id);for(const j of jobs)j.display.textContent=j.exact;root.classList.remove('visitor-count-reveal');root.style.removeProperty('--count-progress');};
+const step=t=>{if(stopped)return;if(!root.isConnected||root.closest('[hidden]')||root.getAttribute('data-stale')==='true'||!allowed()){finish();return;}const p=Math.min(1,Math.max(0,(t-start)/duration)),eased=1-(1-p)**3;root.style.setProperty('--count-progress',String(eased));if(p<1)id=request(step);else finish();};
+root.classList.add('visitor-count-reveal');root.style.setProperty('--count-progress','0');id=request(step);return finish;
 }
 function installVisualMotion(doc){
 if(motionControllers.has(doc))return;
 const win=doc.defaultView,system=win.matchMedia('(prefers-reduced-motion: reduce)'),root=doc.documentElement;
-let paused=false;const stops=new Set();
+let paused=false;try{paused=win.sessionStorage.getItem('fleetlab-visual-pause')==='true';}catch{}const stops=new Set();
 const allowed=()=>!paused&&!system.matches&&root.getAttribute('data-motion')!=='reduce'&&!doc.hidden;
 const control=node(doc,'button',{type:'button',class:'visitor-motion-control','aria-pressed':'false'},'Pause visual motion');
-const sync=()=>{const enabled=allowed();root.setAttribute('data-visitor-motion',enabled?'running':'paused');control.textContent=system.matches||root.getAttribute('data-motion')==='reduce'?'Visual motion: reduced':paused?'Resume visual motion':'Pause visual motion';control.disabled=system.matches||root.getAttribute('data-motion')==='reduce';control.setAttribute('aria-pressed',String(paused));root.toggleAttribute('data-visitor-user-paused',paused&&!control.disabled);if(!enabled){for(const stop of stops)stop();stops.clear();}};
-control.addEventListener('click',()=>{paused=!paused;sync();});doc.body.appendChild(control);system.addEventListener('change',sync);doc.addEventListener('visibilitychange',sync);
+const sync=()=>{const enabled=allowed();root.setAttribute('data-visitor-motion',enabled?'running':'paused');control.textContent=system.matches||root.getAttribute('data-motion')==='reduce'?'Visual motion: reduced':paused?'Resume visual motion':'Pause visual motion';control.disabled=system.matches||root.getAttribute('data-motion')==='reduce';control.setAttribute('aria-pressed',String(paused));root.toggleAttribute('data-visitor-user-paused',paused);if(!enabled){for(const stop of stops)stop();stops.clear();}};
+control.addEventListener('click',()=>{paused=!paused;try{win.sessionStorage.setItem('fleetlab-visual-pause',String(paused));}catch{}sync();});doc.body.appendChild(control);system.addEventListener('change',sync);doc.addEventListener('visibilitychange',sync);
 new MutationObserver(sync).observe(root,{attributes:true,attributeFilter:['data-motion']});sync();
 const counts=doc.querySelector('.ops-outcome-visual');
 if(counts){

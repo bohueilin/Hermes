@@ -54,7 +54,7 @@ test('Street start action leaves summary focus without scrolling to the scene',a
  const restore=installFakeDom();let lab;try{
   lab=createStreetLab();document.body.appendChild(lab.element);lab.setConfig({duration_minutes:10,background_per_hour:0});
   let scrolls=0;lab.element.querySelector('.street-map').scrollIntoView=()=>scrolls++;
-  lab.element.querySelector('.street-intro button').click();await new Promise(resolve=>setTimeout(resolve,20));
+  lab.element.querySelector('.street-intro button').click();await new Promise(resolve=>setTimeout(resolve,0));while(lab.getState().busy)await new Promise(resolve=>setTimeout(resolve,10));
   assert.equal(scrolls,0);assert.equal(document.activeElement,lab.element.querySelector('.street-results h2'));assert.equal(lab.getState().playing,false);
  }finally{lab?.destroy();restore();}
 });
@@ -93,4 +93,13 @@ test('confirmed defect: the followed AV detail never prints null, undefined or N
   lab.seek(600);clean('minute 10, passenger on board');lab.seek(0);clean('back at minute 0');
   lab.element.querySelector('.street-replay-variant').querySelectorAll('button')[1].click();clean('queue-aware replay at minute 0');
  }finally{lab?.destroy();restore();}
+});
+test('a long run hands the page back between slices, so destroying the lab mid-run stops it quietly',async()=>{
+ const restore=installFakeDom();try{
+  const lab=createStreetLab({reducedMotion:()=>true});document.body.appendChild(lab.element);lab.setConfig({duration_minutes:30,background_per_hour:0});
+  // Queued behind the run's own start: it can only fire mid-run if the run yields between slices.
+  const pending=lab.run();setTimeout(()=>lab.destroy(),0);await pending;
+  assert.equal(lab.getState().run,null,'the destroyed run records nothing');
+  assert.equal(lab.element.querySelector('.street-status').textContent,'Building the street experiment…','no error replaces the busy status');
+ }finally{restore();}
 });

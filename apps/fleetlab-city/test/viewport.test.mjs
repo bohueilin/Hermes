@@ -8,14 +8,8 @@ import {hostedSite,serveSite} from './hosted-site-fixture.mjs';
 import {MEASURE,TITLES as ROUTES,settle} from './viewport-measure.mjs';
 
 const SIZES=[[320,700],[390,844],[768,1000],[1280,900]];
-// Before-baseline at the base (spec section 9): at 320 px the depot page is 355 px wide, because the 322 px "Depot content
-// cache (diagnostic field)" select overflows with its label and note. Two more sources were recorded with it: the import
-// and share block (#share) reaches 329 px on its own, so a fix to the select alone still fails this cell, and the fixed
-// motion control sits at the right edge of the widened page. Step A cannot fix it, so the cell must keep overflowing from
-// that select, from those recorded sources only and by at most 8 px past 355, until the entry is removed deliberately.
-// The 8 px absorbs font and rounding differences between Chrome builds (the CI image has 155), since the select is as
-// wide as its longest option's text; a new overflowing element fails at any size.
-const KNOWN_OVERFLOW=new Map([['/depot-readiness/ 320',{cause:'Depot content cache (diagnostic field)',scrollWidth:355,tolerance:8,within:['#share','.visitor-motion-control']}]]);
+// Wave 2 closes the recorded Depot control/share overflow.
+const KNOWN_OVERFLOW=new Map();
 // In-page predicate: inside the cause select's own field, or inside one of the other recorded sources.
 const recorded=({cause,within})=>`(el=>{const s=[...document.querySelectorAll('select')].find(s=>s.labels?.[0]?.textContent.trim()===${JSON.stringify(cause)});
  return !!s?.parentElement?.contains(el)||${JSON.stringify(within)}.some(w=>el.closest(w));})`;
