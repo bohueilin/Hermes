@@ -68,6 +68,8 @@ export function decorateShell(doc=document){
  if(!header&&sources&&main){header=el('header',{},el('a',{class:'brand',href:'/#/home'},'FleetLab'));doc.body.insertBefore(header,main);}
  if(header&&!header.classList.contains('design-shell')){
   header.classList.add('design-shell');
+  // The skip link's target takes focus, as the studio's main does.
+  if(main&&!main.hasAttribute('tabindex'))main.setAttribute('tabindex','-1');
   const tabs=header.querySelector('.tabs'),intro=main?.querySelector('.intro');
   if(tabs&&main){tabs.classList.add('design-local-nav');main.insertBefore(tabs,intro?intro.nextSibling:main.firstChild);}
   if(!header.classList.contains('studio-header')){
@@ -88,7 +90,7 @@ export function decorateShell(doc=document){
    for(const text of p.childNodes)if(text.nodeType===3)text.textContent=text.textContent.replace(/Not affiliated with or endorsed by[^.]*\.\s*/g,'');
   }
   if(!footer.querySelector('nav'))footer.appendChild(el('nav',{'aria-label':'Footer navigation'},[['Explore','catalog'],['About & limits','approach'],['Guided walkthrough','walkthrough']].map(([label,route])=>el('a',{href:'/#/'+route},label))));
-  if(!footer.classList.contains('studio-footer')&&!footer.querySelector('time'))footer.appendChild(el('time',{datetime:'2026-11-08'},'Date: Nov 8th, 2026'));
+  if(!footer.classList.contains('studio-footer')&&!footer.querySelector('time'))footer.appendChild(el('time',{datetime:'2026-11-11'},'Date: Nov 11th, 2026'));
  }
  if(sources&&main){
   if(!main.id)main.id='source-content';

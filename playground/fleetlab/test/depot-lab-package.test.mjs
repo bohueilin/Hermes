@@ -51,10 +51,10 @@ test('an undeclared depot dependency fails closed instead of falling through to 
 });
 
 test('Q6 limits are written exactly and the generic 524,288 branches are unchanged',()=>{
- assert.deepEqual(OWNER_LIMITS,{legacy_text_bytes:2624909,emitted_text_bytes:3801088,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432});
- for(const [k,v]of Object.entries({raw_source_and_tools_bytes:3940352,emitted_text_bytes:3801088,package_metadata_bytes:57344,source_offer_extracted_bytes:5242880,source_offer_compressed_bytes:4194304,teaching_generation_bytes:17825792,legacy_text_bytes:2624909,nf03_closure_bytes:557056,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432,offline_bytes:2586822}))assert.equal(LIMITS[k],v,k);
+ assert.deepEqual(OWNER_LIMITS,{legacy_text_bytes:2625315,emitted_text_bytes:3801088,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432});
+ for(const [k,v]of Object.entries({raw_source_and_tools_bytes:3940352,emitted_text_bytes:3801088,package_metadata_bytes:57344,source_offer_extracted_bytes:5242880,source_offer_compressed_bytes:4194304,teaching_generation_bytes:17825792,legacy_text_bytes:2625315,nf03_closure_bytes:557056,nf04_closure_bytes:524288,depot_route_local_bytes:524288,depot_closure_bytes:786432,offline_bytes:2587228}))assert.equal(LIMITS[k],v,k);
  const m=measureSiteOwnership(site);
- assert.ok(m.legacy_text_bytes<=2624909,`legacy ${m.legacy_text_bytes}`);
+ assert.ok(m.legacy_text_bytes<=2625315,`legacy ${m.legacy_text_bytes}`);
  assert.ok(m.depot_route_local_bytes<=524288&&m.depot_closure_bytes<=786432);
  assert.equal(m.depot_closure_bytes,sum(site,new Set([...routeModules(site,DEPOT_ENTRIES),...DEPOT_FILES,'_headers'])));
  const css=`${DEPOT_DIR}/visual.css`,pad=n=>{const f=new Map(site);f.set(css,site.get(css)+' '.repeat(n));return f;};

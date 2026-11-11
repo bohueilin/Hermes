@@ -12,14 +12,15 @@ export const RUNTIME={node:'v22.23.4',python:'3.11.15'};
 export const OFFLINE_BEFORE={bytes:2565111,sha256:'313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58fa1'};
 // Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
 // Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then the Street slicing and world reuse 1,469 B, to the offline edition.
-export const OFFLINE_AFTER={bytes:2586822,sha256:'85f824d5796a93136caa7d4573c6d710a218203d2757244c0b2d823bcf75a08a'};
+// Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add 406 B.
+export const OFFLINE_AFTER={bytes:2587228,sha256:'4fdc264ee55d6c38367240f46dec719e822cd4f9170d2cfc855f615f263b25d8'};
 // Section 3 stage bounds; both modes apply them.
 // Catalog look_for wave (2026-10-31, owner): OFFLINE_AFTER and emitted_text_bytes (3577477) re-pinned to the measured stage, no allowance.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 // Perf waves (2026-11-09 and 11-10, owner): every affected ceiling re-pinned to the exact measured stage, no spare bytes.
-export const BOUNDS={nf03_closure_bytes:595495,nf04_closure_bytes:276879,delivery_order_closure_bytes:282003,r1_closure_bytes:253367,r3_closure_bytes:208786,depot_closure_bytes:568685,
- emitted_text_bytes:3648910,integration_text_bytes:184106,integration_source_bytes:445023,source_offer_extracted_bytes:4160569,source_offer_compressed_bytes:1172318,
- package_metadata_bytes:45385,non_city_bytes:16453825};
+export const BOUNDS={nf03_closure_bytes:595010,nf04_closure_bytes:276394,delivery_order_closure_bytes:281518,r1_closure_bytes:252832,r3_closure_bytes:208330,depot_closure_bytes:568200,
+ emitted_text_bytes:3648811,integration_text_bytes:183622,integration_source_bytes:444482,source_offer_extracted_bytes:4160549,source_offer_compressed_bytes:1172408,
+ package_metadata_bytes:45385,non_city_bytes:16454222};
 export const ROUTE_LOCAL={min:418150,max:418159};
 // BEFORE values at the base. The compressed offer embeds the commit, so only non-City minus the offer is exact across commits.
 export const BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,

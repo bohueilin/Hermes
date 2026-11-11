@@ -138,7 +138,7 @@ export function mountStudio(app) {
   const navigation=el('nav',{id:'studio-navigation','aria-label':'Main navigation','data-expanded':'false'},navLinks);
   const menu=el('button',{type:'button',class:'studio-menu','aria-controls':'studio-navigation','aria-expanded':'false',on:{click:()=>setMenu(menu.getAttribute('aria-expanded')!=='true')}},'Menu');
   function setMenu(open){menu.setAttribute('aria-expanded',String(open));navigation.setAttribute('data-expanded',String(open));menu.textContent=open?'Close':'Menu';}
-  const header=el('header',{class:'studio-header'},[
+  const header=el('header',{class:'studio-header',on:{keydown:event=>{if(event.key==='Escape'&&menu.getAttribute('aria-expanded')==='true'){setMenu(false);menu.focus();}}}},[
     el('div',{class:'studio-brand'},[brand,el('div',{},[el('strong',{},'FleetLab'),el('span',{},'by Hermes')])]),
     menu,navigation,
   ]);

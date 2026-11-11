@@ -133,6 +133,6 @@ export function mountCityEntry(doc = document) {
   doc.querySelector('.studio-footer').appendChild(node('div', {class:'owner-contact'}, [
     node('span', {}, 'Built by Bo-Huei Lin · Ideas, questions or collaboration?'),
     node('a', {href:'mailto:bohueilin@gmail.com'}, 'bohueilin@gmail.com'),
-    node('time', {datetime:'2026-11-08'}, 'Date: Nov 8th, 2026'),
+    node('time', {datetime:'2026-11-11'}, 'Date: Nov 11th, 2026'),
   ]));
 }

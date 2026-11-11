@@ -272,6 +272,9 @@ test('compact navigation exposes its state and closes after a destination is cho
   toggle.click();assert.equal(toggle.getAttribute('aria-expanded'),'true');
   assert.equal(nav.getAttribute('data-expanded'),'true');
   assert.equal(toggle.textContent,'Close');
+  nav.querySelector('a').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(toggle.getAttribute('aria-expanded'),'false','Escape closes the open menu');assert.equal(document.activeElement,toggle,'and returns focus to Menu');
+  toggle.click();
   const explore=nav.querySelector('[data-nav="catalog"]');assert.ok(explore,'Explore is discoverable from the header');
   explore.click();
   assert.equal(x.studio.element.getAttribute('data-page'),'catalog');

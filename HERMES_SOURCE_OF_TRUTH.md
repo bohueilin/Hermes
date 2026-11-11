@@ -39,9 +39,9 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 | 11-11 | (no release) | `main` reconciled with the live line (PR #27). Four test-only fixes made the concept-motion browser test pass on the CI runner |
 
 **What the performance waves changed** (Chrome 157; 1280×900 and 320×700 with Slow 4G and 4× CPU):
-- **Layout shift at mount:** 0.0000 on every studio route, Readiness, Rebalancing and Dispatch, from up to 1.03. City Explorer is unchanged (0.039 desktop, 0.266 mobile).
+- **Layout shift at mount:** 0.0000 on every studio route, Readiness and Dispatch, and 0.0001 on Rebalancing (desktop), from up to 1.03. City Explorer is unchanged (0.039 desktop, 0.266 mobile).
 - **Images fetched by hidden routes:** none now, which saves 1.5 to 1.9 MB per studio route at mount.
-- **Street lab:** the run is sliced, so there are no Long Tasks at 4× CPU (one 53 ms task in 10 runs), against 1.3 and 2.8 s single tasks before.
+- **Street lab:** the run is sliced: 0 Long Tasks in 9 of 10 runs at 4× CPU (one marginal 53 ms task, 3 ms TBT, in the first live Run), against 1.3 and 2.8 s single tasks before.
 - **Methodology explainer:** no frames drawn while off screen.
 - **Opt-in performance suite:** `FLEET_PLAYGROUND_PERF=1` passes in full.
 
@@ -56,6 +56,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 - **Words and colour.** The boundary and honesty copy stays verbatim (`hub-copy.test.mjs`), and the colour lock holds (`colour-lock.test.mjs`): amber and terracotta never mark a new state or warning.
 - **Media.** Never use the reserved eighth enhancement slot, and never touch A2 or the held Fleet day film. Settled art verdicts stay settled (October 26 rules).
 - **Honesty.** Record only checks that actually ran, with their output, and name what was not checked.
+- **Website date rule (always applies).** Whenever a release goes live, the website footer date must be the exact date it goes live: `apps/fleetlab-city/hosted/integration.mjs` (studio pages), `apps/fleetlab-city/hosted/brand.mjs` (City Explorer and Depot Readiness) and the assertion in `apps/fleetlab-city/test/structural-shell.test.mjs`, with the exact byte ceilings re-measured if the date string's length changes. Never ship a release with a stale footer date. If the upload slips to a later day, change the date and rebuild the stage before uploading. (Owner, 2026-11-10.)
 
 ### 5. How to change the site safely
 
@@ -95,19 +96,41 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
    - The runner renders frames slowly. A browser test must wait for frame-driven state (a viewport observer, an animation's `ready` point, a media-query change) rather than read it after a fixed short delay. `concept-pipe-cycle-browser.test.mjs` shows the pattern.
    - A job that gets no runner is cancelled with zero steps. That is not a pass: re-run it.
 9. **Release.**
+   - Before the stage is built, set the footer date to the day the release will go live (the website date rule in §4). If the upload slips to a later day, change the date, rebuild the stage and re-run the stage check first.
    - The owner uploads the built stage from Terminal with the locked wrapper.
    - The commands are untagged blocks, one per block, with no `#` comments, and the expected output goes in prose. The window must first `cd` into the release worktree: from any other folder the wrapper is not found.
    - The agent then runs the full readback and the header check on both hosts, writes the receipt and the compact public record with `record-release.mjs`, and updates this file.
    - Finally, `main` is reconciled through a pull request. The November 2 section gives the full path; the November 10 section shows the latest run.
 
-### 6. Open before new design work
+### 6. Open before new design work (refreshed 2026-11-10)
 
-**Owner decisions still open, as last recorded** (October 26 to November 2 sections). These were recorded before the November 4–8 waves, whose detailed records are kept privately. Re-check each on the live site before relying on it:
-- whether the Scope 1 re-inspection condition is met, which gates Scope 2 (the 16:9 hero template, hosted pause unification, defect (c) and the depot "Deeper experiment" eyebrow, D1, which needs a ruling on the pinned depot route-local bytes) and Scope 3 (media and re-renders, only after the owner locks the art direction);
-- FL-A4 priority below 768 px, and the hero shimmer;
-- Delivery PARTIAL (R13), and the repeated Limits on Lessons 15 and 16;
-- R1, the fixed Pause control overlapping content. Since UX wave 2B the Pause control sits in the page header, which suggests R1 no longer applies; not re-checked against R1's original criteria;
-- whether to require the CI checks on `main`, which has no branch protection, and whether to add the City Python suite and a stage build to CI.
+The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`; on the live site only once released) settled most items. Its report is kept privately with the release evidence.
+
+**Closed, fixed or ruled in that wave:**
+- **Scope 1 re-inspection condition:** met (owner ruling, 2026-11-10). Scope 2 items may proceed one by one, each with the owner's approval.
+- **R1, the Pause control overlapping content:** closed. Measured on 11 pages at 320, 390, 768 and 1280 px in Chrome 157, and in WebKit 26.6 and Firefox 155: no overlap, clipping or horizontal overflow. Since UX wave 2B the control sits in the page header.
+- **Repeated Limits:** fixed for Lessons 15 to 19 and the staffing, charging, resources and airport situations. A Fleet day panel now hides its Limits while the lesson or situation frame above shows the same ones (`operations-lab.js`, with a regression test). The rest of those frames still repeats in the panels ("What & why", "How we simulate" and so on), as does Lesson 20's whole frame in the Launch rehearsal panel; neither was in scope.
+- **Hero shimmer:** retired. The decorative sweep on the Software delivery, Delivery order and Rebalancing heroes is removed (`visitor.css`), which takes 632 B off every closure.
+- **FL-A4 priority below 768 px:** kept as built (owner ruling): eager and high priority from 768 px, lazy and low below.
+- **Defect (c), D6:** fixed. Before its study arrives, Rebalancing reads "No result yet" instead of "Recorded policy · after decision" and "0 min". Dispatch no longer draws an empty takeaway box. Both have regression tests.
+- **D1, the depot "Deeper experiment" eyebrow:** closed as an accepted residual. Earlier reviews declined it, and nothing later replaced it. If it is wanted later, rewording the existing eyebrow to "DEEPER EXPERIMENT · STAGE 1" measured −2 B on the depot route-local figure.
+- **R13, Delivery PARTIAL:** verified as bookkeeping, not a defect. The two required copy edits target text that does not exist in the source: there is no "Specification notation" string, and the fleet-intake controls have no "steps of" text. The power (24 to 56) and ports (16 to 28) inputs work. Closing it needs the owner to drop the two items from the required set.
+- **Workbench leftovers:** none remain. The tile-swap files went with the 2026-11-03 reorganization.
+- **Accessibility fixes:**
+  - after a run, Fleet day brings the focused "Result summary" heading into view;
+  - the studio's phone menu closes on Escape and returns focus to Menu, as the static pages' menu already did;
+  - on the static pages, `main` takes focus from the skip link.
+
+**Still open (owner decisions):**
+- **Pause scope (hosted pause unification).** The global Pause stops all hosted motion and the lesson videos. It does not stop playback a visitor started: the guides and snapshot stepping on Capacity, Software delivery, Delivery order, Rebalancing and Dispatch. Decide whether it should; a fix sketch is in the wave's report.
+- **Street lab focus after a run.** Focus moves to the "Result summary" heading, and the page deliberately keeps the visitor's scroll position (both pinned by tests), so the focused heading is off screen. Choose between scrolling to it and keeping the position with focus left on Run.
+- **Header focus order at phone width.** Tab goes logo, Menu, Pause, while the visual order is logo, Pause, Menu (CSS `order`). Aligning them means moving a control on screen.
+- **Minor accessibility gaps:**
+  - skipped heading levels on Street lab and on Rebalancing's explainer (h1 to h3);
+  - unnamed side-panel landmarks on Fleet day, Street lab and the hub;
+  - repeated "Open setup →" link text on Home.
+- **Safari and WebKit image loading.** WebKit fetches the hidden routes' images, because the route-scoped deferral relies on the lazy-load timing of Chromium and Firefox. A fix sets `loading` before `src` when an image is created.
+- **CI.** Whether to require the CI checks on `main` (no branch protection), and whether to add the City Python suite and a stage build.
 
 **Accepted as is:**
 - Mobile `/#/catalog` LCP 10.06 s live, above its 7.8 s target (owner, 2026-11-10). No JavaScript tile-holding and no new artwork.
@@ -120,7 +143,10 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 - City Explorer's client-side redirect costs 0.26 to 0.96 s.
 - City Explorer's own mount shift (its masthead) is unchanged.
 
-**Never tested on this release:** Safari, Firefox, screen readers, and a physical phone.
+**Browser and device coverage (2026-11-10):**
+- **Chrome 157:** every check.
+- **WebKit 26.6 and Firefox 155,** through the Playwright builds already on the owner's Mac, on 8 pages at 1280 and 320 px. Checked: the decoration, the hold release, the Pause control's layout and the image deferral. No site errors. Firefox logs Google Analytics cookies rejected for the `pages.dev` domain. WebKit reports some setup cards on Readiness as `visibility: hidden` through `getComputedStyle`, yet draws them normally (checked by screenshot).
+- **Never tested:** real Safari (it needs "Allow remote automation", an owner setting), screen readers, and a physical phone on this candidate.
 
 ### 7. Before you start new design or implementation work
 
@@ -155,12 +181,12 @@ The November 2 section's "Start here" block and the October 26 rules apply as be
 
 | What | State |
 |---|---|
-| Source | `0b0fb0566d3f906686c3f4cb14f1a240c5abe081` on `claude/fleetlab-perf-20261109`. Pushed 2026-11-10 on the owner's written authorization naming that branch and commit. Merged into `main` through a pull request from `claude/fleetlab-main-reconcile-0b0fb05`, whose merge commit `d52cc65` joins the two lines |
+| Source | `0b0fb0566d3f906686c3f4cb14f1a240c5abe081` on `claude/fleetlab-perf-20261109`. Pushed 2026-11-10 on the owner's written authorization naming that branch and commit. Merged into `main` through a pull request from `claude/fleetlab-main-reconcile-0b0fb05`, whose merge commit `d52cc65` joined the two lines on that branch; PR #27 itself merged onto `main` as `4c0de12` |
 | Production | https://fleetlab.pages.dev/, Pages deployment `d477d470` (https://d477d470.fleetlab.pages.dev/), uploaded by the owner from Terminal with the locked wrapper on 2026-11-10 |
-| City Explorer | Current generation `city-explorer/releases/1f560fc76eb1a729`, rollback generation `d71826cf1aa949ea`. The City base is unchanged from `5a4dafb` |
+| City Explorer | Current generation `city-explorer/releases/1f560fc76eb1a729`, rollback generation `d71826cf1aa949ea`. The City base (`city-base-refresh-20261108b/base`) is unchanged from `5a4dafb`; `build-release.py` re-brands that base with the release's hosted shell and source commit, which gives each release a new generation hash. The footer reads "Date: Nov 8th, 2026": `0b0fb05` shipped with the date of `5a4dafb`, before the website date rule |
 | Rollback | Pages deployment `9de52270` (source `5a4dafb`); before it `1dfb0f22` (`4b039be`) |
 | Live verification, 2026-11-10, both hosts | `publication.json` 1,800 B, byte-equal to the stage, `source_commit` `0b0fb05…`, on both hosts. Offline edition 2,586,822 B, `85f824d5…`, on both hosts. Full readback 10,186 / 10,186 files with 0 mismatches, and effective headers 100 / 100, on https://fleetlab.pages.dev and on https://d477d470.fleetlab.pages.dev. A headless Chrome 157 check with no request interception covered `/#/home`, `/#/catalog`, `/#/street-lab` and `/depot-readiness/` at 1280×900 and 320×700 (Slow 4G, 4× CPU), 3 cold loads each. Mount layout shift was 0.0000 in all 24 loads. The Street lab gave identical results in every run, with 0 Long Tasks in every Compare and in 5 of 6 Runs at 4× (one 53 ms task). The methodology explainer drew 0 frames in 5 s off screen. Not done: Safari, Firefox, screen readers or a physical phone |
-| Gates at `0b0fb05` (clean tree, Node 22.23.4, Python 3.11.15) | Stage check 20 / 20, every exact bound at 0 B spare (the package-metadata cap kept as before). Stage packaging 16 / 16. City Python 375. City Node 345 / 345. Playground 2,969 / 2,978 (8 skipped, 1 TODO, 0 fail). Traffic 14 / 14. Playground with `FLEET_PLAYGROUND_PERF=1`: 3,287 / 3,288 (1 TODO, 0 fail, 0 skipped) |
+| Gates at `0b0fb05` (clean tree, Node 22.23.4, Python 3.11.15) | Stage check 20 / 20, every exact bound at 0 B spare (the package-metadata cap kept as before). Stage packaging 16 / 16. City Python 375. City Node 345 / 345. Playground 2,969 / 2,978 (8 skipped, 1 TODO, 0 fail). Traffic 14 / 14. Playground with `FLEET_PLAYGROUND_PERF=1`: 3,287 / 3,288 (1 TODO, 0 fail, 0 skipped). Against `5a4dafb`'s 3,283 / 3,285, that is +3 tests and +4 passes: +1 test in wave 1 (`methodology-explainer.test.mjs`), +2 in wave 2 (`street-simulation.test.mjs` and `street-lab.test.mjs`), and the `scale-lab.test.mjs` packed-page test, which now passes |
 | Scheduled readback | The daily task `fleetlab-daily-readback` still checks the `5a4dafb` stage record, so it will report FAIL until it is re-pointed to the `0b0fb05` record (next actions, row 1) |
 | Evidence | Kept privately outside the repository: the performance report and its traces, the stage, the gate receipts and the live readbacks. The stage record is `local-release.json`, SHA-256 `62046314f9e6fdb0e48a4b4fd3be344e05c35c4b9cac520e282362db3df33d48`; the stage holds 10,187 files and 1,629,830,696 B |
 
@@ -191,7 +217,7 @@ What changes on the site (Chrome 157 over the DevTools protocol, 1280×900 unthr
 | City Explorer Window A | 0.039 desktop, 0.266 mobile | unchanged |
 | Images fetched at mount on a studio route | 2.0–2.7 MB | 0.1–1.2 MB (−1.5 to −1.9 MB) |
 | Mobile `/#/catalog` LCP | 12.8 s | 10.06 s live (9.57 s with the changed files served locally) |
-| Street lab main-thread block at 4× CPU (Run / Compare) | 1,347 / 2,763 ms in one task | no Long Task in 9 of 10 runs; one 53 ms task in the first live Run |
+| Street lab main-thread block at 4× CPU (Run / Compare) | 1,347 / 2,763 ms in one task | 0 Long Tasks in 9 of 10 runs; one marginal 53 ms task (3 ms TBT) in the first live Run |
 | Methodology explainer frames while off screen, per 5 s | 300 | 0 |
 | Opt-in `scale-lab` packed test | fails (test sandbox) | passes |
 

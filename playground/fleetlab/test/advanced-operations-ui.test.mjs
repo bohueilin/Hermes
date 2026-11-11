@@ -3,6 +3,7 @@ import {test} from 'node:test';
 import {installFakeDom} from './helpers/fake-dom.mjs';
 import {createOperationsLab} from '../src/ui/operations-lab.js';
 import {advancedOperationsDemoConfig} from '../src/model/bay-experiment-contract.js';
+import {simulationCatalog} from '../src/ui/simulation-catalog.js';
 
 test('loading a decision lesson selects its actual paired treatment; ordinary edits retain user choice',async()=>{
  const restore=installFakeDom();try{const lab=createOperationsLab({reducedMotion:()=>true});
@@ -72,5 +73,18 @@ test('comparison exposes axis, held-out seeds, practical margin and per-seed ser
  const node=advancedComparisonView({validity:'VALID',replications:1,descriptive:true,analysis:null,spec:{axis:{path:'charging.policy',baseline:'equal_share',candidate:'redistribute'},seeds:[1001],tuning_seeds:[42],margin:.02,null_treatment:false},per_seed:[{seed:1001,baseline:arm,candidate:arm}]});
  for(const d of node.querySelectorAll('details'))d.remove();
  assert.match(node.textContent,/charging.policy/);assert.match(node.textContent,/Held-out evaluation seeds: 1001/);assert.match(node.textContent,/Practical margin: 0.02/);assert.match(node.textContent,/Unfinished visits/);assert.match(node.textContent,/Queue/);assert.match(node.textContent,/1.23456789/);assert.match(node.textContent,/no interval or recommendation/);
+ }finally{restore();}
+});
+
+test('Fleet day shows a lesson or situation Limits once; the panels keep theirs when the frame above differs',()=>{
+ const restore=installFakeDom();try{
+  const lab=createOperationsLab({reducedMotion:()=>true}),panels=()=>[...lab.element.querySelectorAll('details.ops-capacity .teaching-limits')];
+  const repeated=()=>{const top=lab.element.querySelector('.ops-teaching .teaching-limits').textContent;return panels().filter(d=>!d.hidden&&d.textContent===top).length;};
+  assert.equal(panels().length,2);assert.deepEqual(panels().map(d=>d.hidden),[false,false]);
+  for(const r of simulationCatalog().filter(r=>r.target==='operations'&&r.id!=='region-launch')){lab.loadScenario(typeof r.patch==='function'?r.patch():structuredClone(r.patch));lab.setLesson(r);assert.equal(repeated(),0,r.id);}
+  const preset=lab.element.querySelector('[aria-label="Start with a situation"]');
+  for(const value of ['staffing','charging','resources','airport','balanced']){preset.value=value;preset.dispatchEvent(new Event('change'));assert.equal(repeated(),0,value);}
+  assert.deepEqual(panels().map(d=>d.hidden),[false,false]);
+  lab.destroy();
  }finally{restore();}
 });
