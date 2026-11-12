@@ -12,7 +12,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 |---|---|
 | Live site | Source `43d415379d611600731ef9d5ae60c93fc4ac3f75`, Pages deployment `febca83c`, uploaded by the owner on the evening of 2026-11-11. `publication.json` names it (checked 2026-11-11) |
 | Rollback | Pages deployment `273b73d6` (source `00d834f`), owner-operated, not rehearsed |
-| `main` | Contains the live line: PR #31 merged the release branch at `43d4153` as `0df5948` (the same tree). This record follows from `claude/fleetlab-release-43d4153` in its own pull request. Start all new work from `main` |
+| `main` | Contains the live line and its record: PR #31 merged the release branch at `43d4153` as `0df5948` (the same tree), and PR #32 merged this record (`aa360cc`) as `4ec54c7`. The site bytes on `main` are those of `43d4153`; the record commits change documentation only. Start all new work from `main` |
 | Release branch | `claude/fleetlab-numbers-webkit-20261111` at `43d4153`. The earlier release branches `claude/fleetlab-fixes-20261110` (`00d834f`), `claude/fleetlab-perf-20261109` (`0b0fb05`) and `codex/fleetlab-ux-impl-20261104` (`5a4dafb`) stay on GitHub |
 | Public release record | [docs/releases/fleetlab-current.json](docs/releases/fleetlab-current.json) describes `43d4153` |
 | Live verification | Full byte readback 10,186 / 10,186 and headers 100 / 100 on the stable and the immutable host. Offline edition 2,588,236 B, SHA-256 `77534e343a3f53ee79255c079d5ad883eb4ca967540625732cde9b5c7e9f42c3`. Every footer checked reads "Date: Nov 11th, 2026" |
@@ -58,6 +58,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 - **Words and colour.** The boundary and honesty copy stays verbatim (`hub-copy.test.mjs`), and the colour lock holds (`colour-lock.test.mjs`): amber and terracotta never mark a new state or warning.
 - **Media.** Never use the reserved eighth enhancement slot, and never touch A2 or the held Fleet day film. Settled art verdicts stay settled (October 26 rules). One recorded exception: on 2026-11-11 the owner approved re-pinning `a2-golden.test.mjs` to `39d136f5…` solely because `loading` and `fetchpriority` now come before `src`; A2 keeps its 624 B, attributes and values, with no visual or artwork change.
 - **Honesty.** Record only checks that actually ran, with their output, and name what was not checked.
+- **Results go in this file (owner rule, 2026-11-11).** Every implementation and its results output are written here so they can be shared: what changed, the checks that ran with their outputs (gates, browser checks, rendered readouts, live readbacks), the merges, and what was not checked. Private reports may hold more detail, but no result may live only there. The file is public: no local paths, credentials or private material.
 - **Website date rule (always applies).** Whenever a release goes live, the website footer date must be the exact date it goes live: `apps/fleetlab-city/hosted/integration.mjs` (studio pages), `apps/fleetlab-city/hosted/brand.mjs` (City Explorer and Depot Readiness) and the assertion in `apps/fleetlab-city/test/structural-shell.test.mjs`, with the exact byte ceilings re-measured if the date string's length changes. Never ship a release with a stale footer date. If the upload slips to a later day, change the date and rebuild the stage before uploading. (Owner, 2026-11-10.)
 - **Pause scope rule (always applies).** The global "Pause visual motion" control stops all decorative and ambient motion and the lesson videos. Playback a visitor starts (the guided walkthroughs, snapshot stepping, and Fleet day and Street lab replays) is controlled by its own transport buttons, and the global Pause does not stop it. (Owner rule, confirmed 2026-11-11.)
 - **Post-run focus rule (always applies).** Focus moved by code after a run or comparison must land on an element that is visible in the viewport: either scroll the focused heading into view, as Fleet day and Street lab do, or leave focus on the visible control. (Owner rule, confirmed 2026-11-11; verified in 18 of 18 browser and width cells.)
@@ -105,6 +106,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
    - Before the stage is built, set the footer date to the day the release will go live (the website date rule in §4). If the upload slips to a later day, change the date, rebuild the stage and re-run the stage check first.
    - The owner uploads the built stage from Terminal with the locked wrapper.
    - The commands are untagged blocks, one per block, with no `#` comments, and the expected output goes in prose. The window must first `cd` into the release worktree: from any other folder the wrapper is not found.
+   - Before the exports, `print -r -- ${+CLOUDFLARE_API_TOKEN} ${+CLOUDFLARE_ACCOUNT_ID}` must print `0 0`. A `1` means an export left over in that Terminal tab, which `/bin/zsh -f` inherits: `unset` it in the clean shell (or use a new window) and export the value fresh. This happened once on 2026-11-11 and was cleared before the upload.
    - The agent then runs the full readback and the header check on both hosts, writes the receipt and the compact public record with `record-release.mjs`, and updates this file.
    - Finally, `main` is reconciled through a pull request. The November 2 section gives the full path; the November 10 section shows the latest run.
 
@@ -184,16 +186,40 @@ The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`, live since 2
 
 | What | State |
 |---|---|
-| Source | `43d415379d611600731ef9d5ae60c93fc4ac3f75` on `claude/fleetlab-numbers-webkit-20261111`, four commits on top of `1031e93`. PR #31 merged it into `main` as `0df5948` on 2026-11-11 (the same tree). This record follows in its own pull request from `claude/fleetlab-release-43d4153` |
+| Source | `43d415379d611600731ef9d5ae60c93fc4ac3f75` on `claude/fleetlab-numbers-webkit-20261111`, four commits on top of `1031e93`. PR #31 merged it into `main` as `0df5948` on 2026-11-11 (the same tree). This record followed as #32 from `claude/fleetlab-release-43d4153` (`aa360cc`), merged as `4ec54c7` on 2026-11-11 |
 | Production | https://fleetlab.pages.dev/, Pages deployment `febca83c` (https://febca83c.fleetlab.pages.dev/), uploaded by the owner from Terminal with the locked wrapper on the evening of 2026-11-11 |
 | City Explorer | Current generation `city-explorer/releases/3c318e266c3d10b0`, rollback generation `d71826cf1aa949ea`. The City base is unchanged; the new generation hash comes from the re-branded hosted shell and source commit, as before |
 | Rollback | Pages deployment `273b73d6` (source `00d834f`); before it `d477d470` (`0b0fb05`) |
 | Live verification, 2026-11-11 Pacific time (2026-11-12 00:42 to 00:52 UTC), both hosts | `publication.json` names `43d4153…` on both hosts. Offline edition 2,588,236 B, `77534e34…`, on both hosts. Full readback 10,186 / 10,186 files with 0 mismatches, and effective headers 100 / 100, on https://fleetlab.pages.dev and on https://febca83c.fleetlab.pages.dev. In Google Chrome 157 through Playwright, with no request interception, the footer of `/#/home`, `/network-flows/rebalancing/`, `/depot-readiness/` and City Explorer read "Date: Nov 11th, 2026" with `datetime` 2026-11-11 on both hosts (8 of 8). Not done: real Safari, screen readers or a physical phone on this release |
-| CI | PR #31 at `43d4153`: "Python 3.11" and "FleetLab Node 22.23.4" passed, the latter including its new "FleetLab City Python suite" step |
+| CI | PR #31 at `43d4153`: "Python 3.11" (1m10s) and "FleetLab Node 22.23.4" (19m23s) passed, the latter including its new "FleetLab City Python suite" step. `main`'s run on `0df5948` passed. #32 at `aa360cc`: both passed (1m11s and 12m45s) |
 | Gates at `43d4153` (clean tree, Node 22.23.4, Python 3.11.15) | Stage check 20 / 20, every exact bound at 0 B spare. The wrapper's `deployPreflight` and `verifyStage` pass without credentials. Unit counters 16 / 16. Stage packaging 17 / 17. City Python 375. City Node 349 / 349, on a re-run of the suite alone (in the full run one test timed out once while browser checks ran alongside). Playground 2,978 / 2,987 (8 skipped, 1 TODO, 0 fail). Traffic 14 / 14. Playground with `FLEET_PLAYGROUND_PERF=1`: 3,296 / 3,297 (1 TODO, 0 fail). `ruff check .` clean. pytest (`-m "not metadrive"`, `CI=true`, `PYTHONPATH=src`): 1,447 passed, 228 skipped by the CI fixture guard, 55 deselected |
 | Browser checks on the stage | Accessibility audit of 11 pages at 1280 and 320 px: 0 of 22 cells with a gap (12 of 22 on `00d834f`). Post-run focus in view in 18 of 18 cells (Chrome, WebKit and Firefox). Phone header order logo, Menu, Pause in all three. Hidden-route image requests 0 in all 42 route cells (WebKit 26.6, Firefox 155, Chrome 157) |
 | Scheduled readback | Re-pointed on 2026-11-11 to the `43d4153` stage record; a dry run of its command read 10,186 / 10,186, exit 0 |
 | Evidence | Kept privately outside the repository: the wave's release report (with the rendered F01 to F04 readouts), the stage, the gate receipts, the live readbacks and the browser observations. The stage record is `local-release.json`, SHA-256 `1b5e2323d2df708ec9049b0dbf6ef00cb94f3f0ade151a71c61731a4449e8787`; the stage holds 10,187 files and 1,629,835,064 B |
+
+### Rendered readouts on default fixtures (stage `43d4153`; the live bytes are identical)
+
+Captured from the built stage in Google Chrome 157 at 1280×900. Table cells are separated by │. Every sum, share and difference was checked by hand, and all agree.
+
+| Page and fixture | Element | Rendered text | Check |
+|---|---|---|---|
+| **F01** `#/depot-flow-lab?lesson=two-vehicles`, "Compare the three rules" | Headline | Equal uplink share and departure deadline first get both vehicles ready on time; first come, first served gets 1 of 2. | |
+| | Header | Upload rule │ Ready on time │ Ready late │ Unfinished / pending, of 2 │ Late minutes, all vehicles │ Vehicle A ready · deadline 15 min │ Vehicle B ready · deadline 5 min | |
+| | Rows | First come, first served │ 1 of 2 │ 1 of 2 │ 0 / 0 │ 8 min, final total │ 12 min · On time │ 13 min · Late; Equal uplink share │ 2 of 2 │ 0 of 2 │ 0 / 0 │ 0 min, final total │ 13 min · On time │ 4 min · On time; Departure deadline first │ 2 of 2 │ 0 of 2 │ 0 / 0 │ 0 min, final total │ 13 min · On time │ 3 min · On time | B under first come is 13 − 5 = 8 min late |
+| **F02** `#/fleet-day` default, seed 42, "Run fleet day" | Summary | 95 completed · 176 unserved · 4 waiting · 9 in progress = 284 requests. … Completion 33.5% of all 284 requests versus the 95% teaching target, not an industry SLA. | 95 + 176 + 4 + 9 = 284; 95 / 284 = 33.5% |
+| | Cards and end state | Completed 95 / 284; Unserved 176 / 284, "Of all requests; riders who left before assignment"; "Mean over 15 completed depot visits; includes queues"; "14 of 29 started depot visits unfinished" | 15 + 14 = 29 |
+| | Activity table | Recorded activity │ Vehicle-hours │ Share of 192 vehicle-hours; Serving riders │ 39.8 │ 20.7%; Empty pickup / reposition │ 87.7 │ 45.7%; Depot work │ 29.1 │ 15.2%; Depot queues │ 25.4 │ 13.2%; Idle / available │ 9.9 │ 5.2% | 24 × 480 ÷ 60 = 192; 39.8 / 192 = 20.7%; shares total 100.0% |
+| **F03** `#/street-lab` default Bridge rush, seed 42 | After "Run street scenario" | 37 of 71 journeys finished in this replay; 0 expired, 12 waiting and 22 in progress at the end. Seed 42, one replay. Pickup wait 19.1 min, "Mean for 50 boarded riders, including pickup dwell"; Passenger leg 28.2 min, "Mean for 37 completed journeys only" | 37 + 0 + 12 + 22 = 71 |
+| | After "Compare route policies" | Mixed trade-off, same demand, seed 42: queue-aware routes finished 41 vs 37 of 71 journeys, with +37.5 km empty distance and +2 vehicles in the busiest-moment queue total. One seed. | |
+| | Table (Free-flow │ Queue-aware │ Change) | Completed journeys, of 71 requests │ 37 │ 41 │ +4; Mean pickup wait, boarded riders │ 19.1 min │ 18.6 min │ -0.5 min; Mean passenger time, completed only │ 28.2 min │ 25.9 min │ -2.3 min; Empty road distance │ 465.5 km │ 503 km │ +37.5 km; Unavailable vehicle time │ 2,436.6 vehicle-min │ 2,429 vehicle-min │ -7.6 vehicle-min; Queued on all streets at the busiest moment │ 138 vehicles │ 140 vehicles │ +2 vehicles; Requests waiting at horizon │ 12 │ 10 │ -2; Requests in progress at horizon │ 22 │ 20 │ -2 | every Change is the shown difference (on `00d834f` the two mean rows read -0.4 and -2.4) |
+| **F04** `/network-flows/capacity/` default, data-heavy workload | Cards: Base; Different rule; More bandwidth; More power | Ready on time 3 of 12, missed 9 of 12 (late 9, unfinished 0), 132.3 min, uplink 57% of available bytes used · site feed not needed; 3 of 12, 9 of 12, 70 min, 57%; 9 of 12, 3 of 12 (late 3, unfinished 0), 1.5 min, 28%; 3 of 12, 9 of 12, 132.3 min, 57% | 3 + 9 = 12; 132.3 − 70 = 62.3 |
+| | Reading | Under the data-heavy workload, departure deadline first leaves on-time readiness at 3 of 12 with 62.3 fewer late minutes; more bandwidth takes on-time readiness from 3 to 9 of 12; more site power changes nothing. | matches the cards |
+| | Full study, first rows | Data-heavy │ Base │ First come, first served │ 3 of 12 │ 9 of 12 │ 105 min; Data-heavy │ Base │ Equal uplink share │ 3 of 12 │ 9 of 12 │ 132.3 min | the morning audit's 105 and 132.3 min figures are these two rows |
+
+**The morning audit's other figures** (a separate review on 2026-11-11 whose notes were not available; the owner relayed its F02 and F03 items):
+- Street lab's "4.5%", a p90 pickup wait rising from 21 to 22 min, and a "10%" saving do not occur in the Street lab source (live or candidate) or the built stage. The Street model computes no percentile; from its records, the default comparison's p90 pickup wait is 38.8 min free-flow and 37.3 min queue-aware. As a share, the passenger-time change is 2.36 / 28.23 = 8.4% of the free-flow mean, and the page prints no percentage. The real defect, the Change column subtracting unrounded means, is fixed.
+- Fleet day's paired policy comparison, the studio's other wait-p90 readout, answers "Experiment unavailable: Enable the charging extension before this comparison." on default settings.
+- Fleet day's 39.8 is vehicle-hours: 39.8 / 192 = 20.7%, now under the header "Share of 192 vehicle-hours".
 
 ### What `43d4153` changed on top of `00d834f`
 
@@ -226,7 +252,7 @@ All copies moved together, as listed in the November 10 section, with the two de
 | Where | What |
 |---|---|
 | `…/Hermes-worktrees/fleetlab-numbers-webkit-20261111` | `claude/fleetlab-numbers-webkit-20261111` at `43d4153`, clean; merged into `main` by PR #31 |
-| `…/Hermes-worktrees/fleetlab-release-43d4153` | `claude/fleetlab-release-43d4153`: this record, on top of `main` `0df5948` |
+| `…/Hermes-worktrees/fleetlab-release-43d4153` | The record branch `claude/fleetlab-release-43d4153` (`aa360cc`, merged by #32), then this results follow-up on `claude/fleetlab-sot-results-20261111`, on top of `main` `4ec54c7` |
 | `…/Hermes-worktrees/fleetlab-workbench` | The release workbench, detached at `1031e93`. Its ignored `build/fleetlab-city/` still holds the stage inputs, the Node 22.23.4 toolchain and the City venv |
 | `…/Hermes-worktrees/ux-impl-20261104` | Not changed in this wave; the daily readback task runs its `readback.py` |
 
@@ -234,7 +260,7 @@ All copies moved together, as listed in the November 10 section, with the two de
 
 | # | Action | Who |
 |---|---|---|
-| 1 | Merge this record's pull request from `claude/fleetlab-release-43d4153` with a merge commit once CI passes | Owner, or an agent on the owner's message naming the branch and commit |
+| 1 | Done 2026-11-11: this record merged as #32 (`4ec54c7`). Merge the results follow-up from `claude/fleetlab-sot-results-20261111` with a merge commit once CI passes | Owner, or an agent on the owner's message naming the branch and commit |
 | 2 | Decide the open items in §6 of the block above (branch protection on `main`, a stage build in CI), starting from `main` | Owner |
 | 3 | Never tested on this release: real Safari, screen readers, a physical phone | Owner, on request |
 
