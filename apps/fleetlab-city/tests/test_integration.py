@@ -154,10 +154,10 @@ class IntegrationTest(unittest.TestCase):
         routes = [{"id": "nf03", "paths": ["route.js", "_headers"]}]
         shared = ("enhancement-motion.mjs", "enhancement-media.mjs", "enhancement-media.css")
         self.assertTrue(set(shared) <= set(integration.brand.TEXT))
-        files = {"route.js": {"bytes": 595007}, "_headers": {"bytes": 0},
+        files = {"route.js": {"bytes": 595527}, "_headers": {"bytes": 0},
                  **{name: {"bytes": 1} for name in shared}}
         self.assertEqual(integration.final_route_counts(routes, files),
-                         {"nf03_closure_bytes": 595010})
+                         {"nf03_closure_bytes": 595530})
         files["enhancement-motion.mjs"]["bytes"] += 1
         with self.assertRaisesRegex(ValueError, "nf03.*closure.*budget"):
             integration.final_route_counts(routes, files)

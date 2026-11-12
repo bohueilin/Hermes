@@ -38,6 +38,14 @@ test("a highly compressed offer cannot hide an excessive extracted JSON size", (
   assert.throws(() => tool.createSourceArchive({ source: "\\".repeat(Math.ceil(tool.LIMITS.source_offer_extracted_bytes / 2) + 1) }), /extracted.*budget/i);
 });
 
+test("the archive length depends on the offered files, not the commit or tree ID", () => {
+  const offer = id => tool.createSourceArchive({ files: { "a.js": "export const a = 1;\n".repeat(50) },
+    source: { commit: id, tree: [...id].reverse().join("") } });
+  const zeros = offer("0".repeat(40)), real = offer("00d834fd3fd3cf66a7c772057bfa682c9aa875ae");
+  assert.equal(zeros.archive.length, real.archive.length);
+  assert.deepEqual(gunzipSync(real.archive), real.raw);
+});
+
 test("shared dependencies count in every closure and duplicate physical paths count separately", () => {
   assert.equal(typeof tool.measureRouteClosures, "function", "closure accounting is not implemented");
   const root = join(scratch, "tiny");
@@ -91,7 +99,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.counts.depot_route_local_bytes, measureSiteOwnership(files).depot_route_local_bytes);
   assert.ok(receipt.counts.depot_closure_bytes <= 786432 && receipt.counts.depot_route_local_bytes <= 524288);
   assert.ok(receipt.counts.package_metadata_bytes <= 57344 && receipt.counts.source_offer_extracted_bytes <= 5242880);
-  assert.ok(receipt.counts.offline_bytes <= 2587228);
+  assert.ok(receipt.counts.offline_bytes <= 2588236);
   assert.equal(receipt.offline.reserved_bytes, APP_MAX_BYTES - readFileSync(offline).length);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
@@ -134,8 +142,8 @@ test("the offline edition reproduces the approved catalog look_for bytes exactly
   // Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then Street slicing and world reuse 1,469 B.
   // Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add 406 B.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2587228);
-  assert.equal(hash(html), "4fdc264ee55d6c38367240f46dec719e822cd4f9170d2cfc855f615f263b25d8");
+  assert.equal(Buffer.byteLength(html), 2588236);
+  assert.equal(hash(html), "77534e343a3f53ee79255c079d5ad883eb4ca967540625732cde9b5c7e9f42c3");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {

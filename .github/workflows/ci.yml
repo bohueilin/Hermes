@@ -78,3 +78,9 @@ jobs:
 
       - name: FleetLab traffic suite
         run: node --test "tools/fleetlab-traffic/test/*.test.mjs"
+
+      - name: FleetLab City Python suite
+        run: |
+          python -m venv "$RUNNER_TEMP/fleetlab-city"
+          "$RUNNER_TEMP/fleetlab-city/bin/python" -m pip install --require-hashes -r apps/fleetlab-city/requirements.lock.txt
+          "$RUNNER_TEMP/fleetlab-city/bin/python" -B -m unittest discover -s apps/fleetlab-city/tests -q

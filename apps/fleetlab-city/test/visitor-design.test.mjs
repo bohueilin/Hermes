@@ -303,3 +303,26 @@ test('fleet-day field notes follow lesson replacement and disappear for unsuppor
   select('upload');assert.match(intro.querySelector('.visitor-field').textContent,/NTT/);assert.equal(teaching.querySelector('.visitor-field'),null);
  }finally{globalThis.MutationObserver=previous;restore();}
 });
+
+test('phone headers show the logo, Menu, the open navigation and Pause in their Tab order',()=>{
+ const phone=file=>readFileSync(new URL(file,import.meta.url),'utf8').match(/@media\(max-width:767px\)\{[^@]*?(?:studio-menu|design-shell-menu)[^@]*/)[0];
+ const order=(css,selector)=>Number(css.match(new RegExp(selector.replace(/[.[\]=]/g,'\\$&')+'\\{[^}]*?order:(\\d+)'))[1]);
+ for(const [file,menu,nav,pause] of [['../../../playground/fleetlab/styles.css','.studio-header .studio-menu','.studio-header nav[data-expanded=true]','.studio-header .visitor-motion-control'],
+  ['../hosted/brand.css','.design-shell-menu','.design-shell>.design-global-nav[data-expanded=true]','.design-shell>.visitor-motion-control']]){
+  const css=phone(file);assert.ok(order(css,menu)<order(css,nav)&&order(css,nav)<order(css,pause),file);
+ }
+});
+
+test('the hub limits panel is a named landmark',()=>{
+ const html=readFileSync(new URL('../hosted/network-hub.html',import.meta.url),'utf8');
+ assert.match(html,/<aside class="hub-boundary" aria-labelledby="hub-limits"><h2 id="hub-limits">/);
+});
+
+test('each Home "Open setup" link names the lesson it opens',()=>{
+ const restore=installFakeDom();
+ try{
+  const home=document.createElement('main');home.className='studio-overview';document.body.appendChild(home);decorateVisitors(document);
+  const labels=home.querySelectorAll('#visitor-insights a').filter(a=>a.textContent==='Open setup →').map(a=>a.getAttribute('aria-label'));
+  assert.equal(labels.length,4);assert.equal(new Set(labels).size,4);for(const label of labels)assert.match(label,/^Open setup: \S/);
+ }finally{restore();}
+});

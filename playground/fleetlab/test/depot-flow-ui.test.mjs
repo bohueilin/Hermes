@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
 import {installFakeDom} from './helpers/fake-dom.mjs';
 import {mediaBlockRules} from './helpers/css-rules.mjs';
-import {flowComparisonSteps} from '../src/model/depot-flow.js';
+import {flowComparisonSteps,runFlowComparison} from '../src/model/depot-flow.js';
 import {inspectState} from '../src/ui/depot-flow-view.js';
 import * as reading from '../src/ui/depot-flow-reading.js';
 const ui=await import('../src/ui/depot-flow-lab.js').catch(()=>({}));
@@ -323,5 +323,13 @@ test('on a desktop every lesson hero child has a placement in the desktop block,
       for(const child of lab.element.querySelector('section.flow-hero').children)assert.ok(rules.some(r=>/grid-(column|area)\s*:/.test(r.body)&&r.selectors.some(x=>child.matches(x))),`${lesson}: ${shape({children:[child]})[0]} has a desktop placement`);
       lab.destroy();}
     for(const r of rules)assert.doesNotMatch(r.body,/(^|[;\s])order\s*:|display\s*:\s*contents/,r.selectors.join());
+  }finally{restore();}
+});
+
+test('the outcomes table shows each vehicle deadline beside its ready time and names the late-minute total',()=>{
+  const restore=installFakeDom();try{
+    const table=reading.outcomesView(runFlowComparison({b_gb:45})).querySelector('table'),text=table.textContent;
+    assert.match(text,/Vehicle A ready · deadline \d+(\.\d+)? min/);assert.match(text,/Vehicle B ready · deadline \d+(\.\d+)? min/);
+    assert.match(text,/Unfinished \/ pending, of 2/);assert.match(text,/Late minutes, all vehicles/);assert.match(text,/\d+ min, final total/);assert.match(text,/\d of 2/);
   }finally{restore();}
 });

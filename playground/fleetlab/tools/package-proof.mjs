@@ -11,7 +11,7 @@ import { constants, closeSync, fstatSync, lstatSync, mkdirSync, openSync,
   readSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { gzipSync } from "node:zlib";
+import { constants as zlib, crc32, deflateRawSync } from "node:zlib";
 import { buildHtml, buildSite, checkSitePath, findRepositoryRoot, moduleGraph } from "./pack.mjs";
 import { checkSite, labelsFromContracts } from "./check-dist.mjs";
 import { DELIVERY_RELEASE, DELIVERY_FILES, DELIVERY_ENTRIES, measureSiteOwnership, measureIntegratedText, lessonNavigation } from "./software-delivery-package.mjs";
@@ -23,12 +23,12 @@ export const RECEIPT_PATH = "downloads/teaching-package.json";
 // Perf wave (2026-11-09, owner): legacy text and the offline edition rise by exactly the explainer's viewport gate, 285 B.
 // Perf wave 2 (2026-11-10, owner): Street slicing and world reuse add exactly 1,391 B of legacy text and 1,469 B of offline edition.
 // Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add exactly 406 B to each.
-export const LIMITS = Object.freeze({ legacy_text_bytes: 2625315, raw_source_and_tools_bytes: 3940352,
+export const LIMITS = Object.freeze({ legacy_text_bytes: 2626727, raw_source_and_tools_bytes: 3940352,
   nf03_closure_bytes: 557056, nf04_closure_bytes: 524288, depot_route_local_bytes: 524288, depot_closure_bytes: 786432,
   emitted_text_bytes: 3801088, package_metadata_bytes: 57344,
   source_offer_compressed_bytes: 4194304, source_offer_extracted_bytes: 5242880,
   teaching_text_plus_source_bytes: 7340032, teaching_generation_bytes: 17825792,
-  offline_bytes: 2587228 });
+  offline_bytes: 2588236 });
 // Per-file read caps stay at their pre-Q6 values; only the src/tools tree totals follow the raw ceiling.
 const FILE_CAPTURE_BYTES = 4194304, INTEGRATED_READ_BYTES = 3145728, PUBLICATION_READ_BYTES = 40960;
 const TOOL_ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -264,11 +264,19 @@ function prepare(playground, sourceCommit, development) {
   return { playground, captured, identity, site, offline };
 }
 
-/** JSON offers carry data only, with independent compressed and extracted byte limits. */
+/** JSON offers carry data only, with independent compressed and extracted byte limits.
+ * The commit-bound "source" member is a stored (uncompressed) deflate block, so the archive's
+ * length depends on the offered files only, never on the commit or tree ID. */
 export function createSourceArchive(value) {
   const raw = Buffer.from(canonical(value) + "\n");
   if (raw.length > LIMITS.source_offer_extracted_bytes) fail("source offer extracted byte budget exceeded");
-  const archive = gzipSync(raw, { level: 9 });
+  const bound = Buffer.from(`"source":${canonical(value.source)}`), at = raw.indexOf(bound), n = bound.length;
+  if (at < 0 || n > 0xffff) fail("source offer identity is not storable");
+  const trailer = Buffer.alloc(8); trailer.writeUInt32LE(crc32(raw)); trailer.writeUInt32LE(raw.length, 4);
+  const archive = Buffer.concat([Buffer.from([0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 2, 255]),
+    deflateRawSync(raw.subarray(0, at), { level: 9, finishFlush: zlib.Z_FULL_FLUSH }),
+    Buffer.from([0, n & 255, n >> 8, ~n & 255, (~n >> 8) & 255]), bound,
+    deflateRawSync(raw.subarray(at + n), { level: 9 }), trailer]);
   if (archive.length > LIMITS.source_offer_compressed_bytes) fail("source offer compressed byte budget exceeded");
   return { raw, archive };
 }
@@ -317,7 +325,7 @@ function assemble({ playground, captured, identity, site, offline }) {
       original_inventory_sha256: digest(canonical(sourceInventory)), owner: "teaching-original-source-and-tools" },
     validation_policy: { repository_path: CONTRACT, ...fingerprint(captured.contracts) },
     license: { repository_path: "LICENSE", ...fingerprint(captured.license) },
-    offline: { path: "downloads/fleetlab-offline.html", ...fingerprint(offline), owner: "complete-offline-edition", reserved_bytes: 34212 }, media,
+    offline: { path: "downloads/fleetlab-offline.html", ...fingerprint(offline), owner: "complete-offline-edition", reserved_bytes: 33204 }, media,
     emitted_files: Object.fromEntries([...site].map(([path, data]) => [path, { ...fingerprint(data), owner: owned.owners[path] }])),
     routes: measured.routes,
     ownership: { receipt: { path: RECEIPT_PATH, owner: "package-metadata", self_hash: "External integration inventory hashes this receipt; own byte size is included by fixed point." },

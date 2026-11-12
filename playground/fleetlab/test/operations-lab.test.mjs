@@ -179,3 +179,18 @@ test('an unavailable resource treatment is rendered without hiding the valid tri
     assert.ok(content.querySelector('table'));lab.destroy();
   }finally{restore();}
 });
+
+test('every Fleet day count and percentage names its population',async()=>{
+  const restore=installFakeDom();
+  try{
+    const lab=createOperationsLab({reducedMotion:()=>true});document.body.appendChild(lab.element);
+    lab.setConfig({fleet_size:8,requests_per_hour:8,duration_hours:2});await lab.run();
+    const m=lab.getState().result.metrics,text=lab.element.textContent;
+    assert.match(text,new RegExp(`Completion [\\d.]+% of all ${m.total_requests} requests versus the 95% teaching target`));
+    assert.match(text,new RegExp(`Unserved${m.unserved_requests} / ${m.total_requests}Of all requests`));
+    assert.match(text,new RegExp(`Mean over ${m.completed_visits} completed depot visits`));
+    assert.match(text,new RegExp(`${m.censored_visits} of ${m.censored_visits+m.completed_visits} started depot visits unfinished`));
+    assert.ok(text.includes('Vehicle-hoursShare of 16 vehicle-hours'),'the share column names 8 vehicles × 2 hours');
+    lab.destroy();
+  }finally{restore();}
+});

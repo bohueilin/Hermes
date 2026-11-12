@@ -4,7 +4,7 @@ const media='/site-media/';
 export function decorateDesign(doc=document){
 const el=(...args)=>node(doc,...args);
 decorateShell(doc);
-const mark=()=>el('img',{src:media+'fleetlab-logo.png',srcset:media+'fleetlab-logo-64.png 64w, '+media+'fleetlab-logo-128.png 128w, '+media+'fleetlab-logo.png 256w',sizes:'(max-width:767px) 48px, 64px',alt:'',width:'64',height:'64',decoding:'async'});
+const mark=()=>el('img',{'data-eager':'',loading:'lazy',srcset:media+'fleetlab-logo-64.png 64w, '+media+'fleetlab-logo-128.png 128w, '+media+'fleetlab-logo.png 256w',sizes:'(max-width:767px) 48px, 64px',src:media+'fleetlab-logo.png',alt:'',width:'64',height:'64',decoding:'async'});
 for(const brand of doc.querySelectorAll('header .studio-monogram,header .delivery-brand,header a.brand')){
  if(brand.getAttribute('data-art-logo'))continue;
  brand.setAttribute('data-art-logo','true');brand.classList.add('design-brand');brand.setAttribute('aria-label','FleetLab home');
@@ -28,7 +28,7 @@ if(home&&!doc.getElementById('design-readiness')){
   control?.focus({preventScroll:true});
  });
  const feature=el('section',{id:'design-readiness',class:'design-readiness','aria-label':'Readiness, made visible'},[
-  el('img',{class:'design-readiness-image',src:media+'readiness.jpg',alt:'Readiness, made visible. Explore the decisions behind fleet availability. An illustrative depot with four autonomous vehicles under a green canopy.',width:'1672',height:'941',fetchpriority:'high',decoding:'async'}),
+  el('img',{class:'design-readiness-image','data-eager':'',loading:'lazy',fetchpriority:'high',src:media+'readiness.jpg',alt:'Readiness, made visible. Explore the decisions behind fleet availability. An illustrative depot with four autonomous vehicles under a green canopy.',width:'1672',height:'941',decoding:'async'}),
   el('div',{class:'design-art-caption'},[
    el('div',{},[el('p',{class:'design-eyebrow'},'A SMALL EXPERIMENT. A VISIBLE TRADE-OFF.'),el('p',{class:'design-art-description'},'Follow the energy, data and decisions that get a vehicle ready for its next ride.')]),
    el('div',{class:'design-art-actions'},[el('a',{href:'/network-flows/capacity/',class:'design-primary'},'Explore depot operations →'),filmButton]),
@@ -39,7 +39,7 @@ if(home&&!doc.getElementById('design-readiness')){
 const feature=doc.querySelector('.network-flows-feature');
 if(feature&&!doc.getElementById('design-network')){
  feature.insertBefore(el('figure',{id:'design-network',class:'design-network'},[
-  el('img',{src:media+'shared-delivery.webp',alt:'Two concept vehicles connected to one shared data source.',width:'2048',height:'1152',loading:'lazy',decoding:'async'}),
+  el('img',{loading:'lazy',src:media+'shared-delivery.webp',alt:'Two concept vehicles connected to one shared data source.',width:'2048',height:'1152',decoding:'async'}),
   el('figcaption',{},'NETWORK FLOWS · Concept visual. Shared work does not guarantee a better outcome for every vehicle.'),
  ]),feature.firstChild);
 }
@@ -47,7 +47,7 @@ const hero=doc.querySelector('.delivery-hero')||doc.querySelector('#order-root .
 if(hero&&!doc.getElementById('design-network-lesson')){
  const art=el('details',{id:'design-network-lesson',class:'design-network-lesson',...(doc.querySelector('.delivery-hero')?{open:''}:{})},[
   el('summary',{},'Same work. Different order. · View the concept artwork'),
-  el('figure',{},[el('img',{src:media+'shared-delivery.webp',alt:'Two concept vehicles connected to one shared data source.',width:'2048',height:'1152',loading:'lazy',decoding:'async'}),el('figcaption',{},'Illustration only. Use the checked model below to compare outcomes and individual delays.')]),
+  el('figure',{},[el('img',{loading:'lazy',src:media+'shared-delivery.webp',alt:'Two concept vehicles connected to one shared data source.',width:'2048',height:'1152',decoding:'async'}),el('figcaption',{},'Illustration only. Use the checked model below to compare outcomes and individual delays.')]),
  ]);hero.appendChild(art);
 }
 decorateFleetCycle(doc);
@@ -327,7 +327,7 @@ export function decorateFleetCycle(doc=document){
   ]);
   figure.replaceChildren(drawing,
    el('ol',{class:'concept-cycle-steps'},steps.map(([title,detail])=>el('li',{},[el('strong',{},title),el('span',{},detail)]))),
-   el('aside',{class:'concept-cycle-conditions'},[el('strong',{},'Conditional holds · outside the nominal loop'),el('p',{},'Queue if a required bay is occupied. Hold if charging or service is incomplete. These are possible constraints, not mandatory stages of every trip.')]),
+   el('aside',{class:'concept-cycle-conditions','aria-label':'Conditional holds'},[el('strong',{},'Conditional holds · outside the nominal loop'),el('p',{},'Queue if a required bay is occupied. Hold if charging or service is incomplete. These are possible constraints, not mandatory stages of every trip.')]),
    el('p',{class:'concept-cycle-note'},'White pods trace a conceptual cycle. Motion shows order only, with no simulated timing, utilization or real-world route.'),
    el('figcaption',{},'Concept illustration · not simulation output'));
  }

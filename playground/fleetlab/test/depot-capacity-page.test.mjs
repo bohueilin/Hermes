@@ -19,6 +19,8 @@ const clean=element=>assert.doesNotMatch(element.textContent,/\bnull\b|undefined
 test('before Load: header, place, manifest cards and a hidden inspector',()=>{
   const restore=installFakeDom();
   try{const p=create(),e=p.element;
+    const skip=e.querySelector('header.studio-header').firstChild;assert.equal(skip.getAttribute('href'),'#capacity-main');assert.equal(text(skip),'Skip to lesson');
+    assert.equal(e.querySelector('main#capacity-main').getAttribute('tabindex'),'-1');
     assert.equal(e.querySelector('a.studio-monogram').getAttribute('href'),'/#/overview');assert.equal(e.querySelector('a.studio-monogram').getAttribute('aria-label'),'FleetLab home');
     assert.deepEqual(e.querySelector('nav#studio-navigation[aria-label="Main navigation"]').querySelectorAll('a').map(a=>[text(a),a.getAttribute('href')]),[['Home','/#/overview'],['Explore','/#/catalog'],['About & limits','/#/approach']]);
     const crumbs=e.querySelector('main.depot-capacity nav.flow-breadcrumb[aria-label="Breadcrumb"]');
@@ -178,7 +180,7 @@ test('every control is reachable by keyboard and the copy has no dashes or banne
   const restore=installFakeDom();
   try{const p=create(),e=p.element;await p.load();
     for(const node of e.querySelectorAll('button, select, input, summary, a'))assert.notEqual(node.getAttribute('tabindex'),'-1',node.localName);
-    for(const node of e.querySelectorAll('[tabindex="-1"]'))assert.match(node.localName,/^h[1-6]$/);
+    for(const node of e.querySelectorAll('[tabindex="-1"]'))assert.match(node.localName,/^(h[1-6]|main)$/);
     for(const details of e.querySelectorAll('details'))assert.ok(details.querySelector('summary'));
     for(const select of e.querySelectorAll('select'))assert.ok(select.getAttribute('aria-label'));
     p.destroy();

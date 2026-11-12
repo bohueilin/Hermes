@@ -8,7 +8,7 @@ export function decorateConceptMedia(doc,createNode){
  const el=(tag,attrs={},children=[])=>createNode(doc,tag,attrs,children);
  const figure=(id,file,alt,caption='',qualification=fence,film=null)=>{
   const [width,height]=file.includes('FL-A2')?[2352,1008]:file.includes('FL-A3')?[2240,1120]:file.includes('FL-V2')?[1280,720]:[2048,1152];
-  const img=el('img',{src:base+file,alt,width:String(width),height:String(height),loading:file.includes('FL-A2')?'eager':'lazy',...(file.includes('FL-A2')?{fetchpriority:'high'}:{}),decoding:'async'});
+  const img=el('img',{loading:'lazy',...(file.includes('FL-A2')?{'data-eager':'',fetchpriority:'high'}:{}),src:base+file,alt,width:String(width),height:String(height),decoding:'async'});
   const media=el('div',{class:'enhancement-visual'},img);
   if(film)media.appendChild(el('video',{'data-concept-src':base+film,preload:'none',muted:'',loop:'',playsinline:'',hidden:'','aria-label':alt}));
   return el('figure',{id,class:'enhancement-media',...(film?{'data-concept-media':'','data-concept-state':'poster'}:{})},[
@@ -41,7 +41,7 @@ export function decorateConceptMedia(doc,createNode){
  const capacity=doc.querySelector('.capacity-hero');
  if(capacity&&!doc.getElementById('enhancement-capacity')){
   const art=figure('enhancement-capacity','FL-A4-capacity-hero.webp','Clay illustration of twelve white autonomous pods moving through three depot service bays while technicians work.','Twelve visits, three shared lanes. Whether the wait is a scheduling problem or a capacity problem is the lesson.'),img=art.querySelector('img');
-  if(doc.defaultView?.matchMedia?.('(min-width:768px)').matches){img.setAttribute('loading','eager');img.setAttribute('fetchpriority','high');}
+  if(doc.defaultView?.matchMedia?.('(min-width:768px)').matches){img.setAttribute('data-eager','');img.setAttribute('fetchpriority','high');}
   capacity.insertBefore(art,capacity.querySelector('.capacity-preview-slot'));
  }
  const deadhead=doc.querySelector('[data-explainer-kind="deadhead"]');
