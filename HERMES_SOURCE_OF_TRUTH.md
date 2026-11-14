@@ -16,7 +16,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 | Release branch | `claude/fleetlab-numbers-webkit-20261111` at `43d4153`. The earlier release branches `claude/fleetlab-fixes-20261110` (`00d834f`), `claude/fleetlab-perf-20261109` (`0b0fb05`) and `codex/fleetlab-ux-impl-20261104` (`5a4dafb`) stay on GitHub |
 | Public release record | [docs/releases/fleetlab-current.json](docs/releases/fleetlab-current.json) describes `43d4153` |
 | Live verification | Full byte readback 10,186 / 10,186 and headers 100 / 100 on the stable and the immutable host. Offline edition 2,588,236 B, SHA-256 `77534e343a3f53ee79255c079d5ad883eb4ca967540625732cde9b5c7e9f42c3`. Every footer checked reads "Date: Nov 11th, 2026" |
-| Daily readback | The owner's Claude Desktop task `fleetlab-daily-readback` runs at 09:00 local and checks every served file against a stage record. It was re-pointed to the `43d4153` record on 2026-11-11; a dry run read 10,186 / 10,186. On a FAIL, read `publication.json` first: a new commit means a deliberate redeploy, so re-point the task; the same commit means the live bytes changed |
+| Daily readback | The owner's Claude Desktop task `fleetlab-daily-readback` runs at 09:00 local and checks every served file against a stage record. It was re-pointed to the `43d4153` record on 2026-11-11; a dry run read 10,186 / 10,186. Its runs since: 2026-11-12 FAIL (10,185 / 10,186: one request got no HTTP response, a transport failure, while the file itself was unchanged), 2026-11-13 PASS, 2026-11-14 PASS. On a FAIL, read `publication.json` first: a new commit means a deliberate redeploy, so re-point the task; the same commit means the live bytes changed |
 
 ### 2. What the site is
 
@@ -146,6 +146,7 @@ The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`, live since 2
 **Still open (owner decisions):**
 - **Branch protection on `main`.** Requiring the CI checks before a merge is a repository setting for the owner; the command is in the wave's report.
 - **A stage build in CI.** CI still never builds a stage; the stage check runs locally before each merge request.
+- **Transport failures in the daily readback.** `readback.py` counts a request that gets no HTTP response as a mismatch, without a retry, so a network blip reads as FAIL (2026-11-12). Retrying such a request once before failing would separate a blip from a changed file; it is a change to a tracked tool and needs the owner's approval.
 
 **Accepted as is:**
 - Mobile `/#/catalog` LCP 10.06 s live, above its 7.8 s target (owner, 2026-11-10). No JavaScript tile-holding and no new artwork.
@@ -194,7 +195,7 @@ The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`, live since 2
 | CI | PR #31 at `43d4153`: "Python 3.11" (1m10s) and "FleetLab Node 22.23.4" (19m23s) passed, the latter including its new "FleetLab City Python suite" step. `main`'s run on `0df5948` passed. #32 at `aa360cc`: both passed (1m11s and 12m45s) |
 | Gates at `43d4153` (clean tree, Node 22.23.4, Python 3.11.15) | Stage check 20 / 20, every exact bound at 0 B spare. The wrapper's `deployPreflight` and `verifyStage` pass without credentials. Unit counters 16 / 16. Stage packaging 17 / 17. City Python 375. City Node 349 / 349, on a re-run of the suite alone (in the full run one test timed out once while browser checks ran alongside). Playground 2,978 / 2,987 (8 skipped, 1 TODO, 0 fail). Traffic 14 / 14. Playground with `FLEET_PLAYGROUND_PERF=1`: 3,296 / 3,297 (1 TODO, 0 fail). `ruff check .` clean. pytest (`-m "not metadrive"`, `CI=true`, `PYTHONPATH=src`): 1,447 passed, 228 skipped by the CI fixture guard, 55 deselected |
 | Browser checks on the stage | Accessibility audit of 11 pages at 1280 and 320 px: 0 of 22 cells with a gap (12 of 22 on `00d834f`). Post-run focus in view in 18 of 18 cells (Chrome, WebKit and Firefox). Phone header order logo, Menu, Pause in all three. Hidden-route image requests 0 in all 42 route cells (WebKit 26.6, Firefox 155, Chrome 157) |
-| Scheduled readback | Re-pointed on 2026-11-11 to the `43d4153` stage record; a dry run of its command read 10,186 / 10,186, exit 0 |
+| Scheduled readback | Re-pointed on 2026-11-11 to the `43d4153` stage record; a dry run of its command read 10,186 / 10,186, exit 0. Runs: 2026-11-12 FAIL, 10,185 / 10,186, because one request (`city-explorer/releases/3c318e266c3d10b0/data/run-1011-candidate-ev-039.json`) returned no HTTP response (status `000`, 0 bytes); the same file matched the stage in the full runs of 2026-11-13 and 2026-11-14 (both PASS, 10,186 / 10,186) and on a direct check of both hosts on 2026-11-14 (200, 178,809 B, `b1aaaee2…`). The live bytes did not change |
 | Evidence | Kept privately outside the repository: the wave's release report (with the rendered F01 to F04 readouts), the stage, the gate receipts, the live readbacks and the browser observations. The stage record is `local-release.json`, SHA-256 `1b5e2323d2df708ec9049b0dbf6ef00cb94f3f0ade151a71c61731a4449e8787`; the stage holds 10,187 files and 1,629,835,064 B |
 
 ### Rendered readouts on default fixtures (stage `43d4153`; the live bytes are identical)
@@ -253,7 +254,7 @@ All copies moved together, as listed in the November 10 section, with the two de
 |---|---|
 | `…/Hermes-worktrees/fleetlab-numbers-webkit-20261111` | `claude/fleetlab-numbers-webkit-20261111` at `43d4153`, clean; merged into `main` by PR #31 |
 | `…/Hermes-worktrees/fleetlab-release-43d4153` | The record branch `claude/fleetlab-release-43d4153` (`aa360cc`, merged by #32), then this results follow-up on `claude/fleetlab-sot-results-20261111`, on top of `main` `4ec54c7` |
-| `…/Hermes-worktrees/fleetlab-workbench` | The release workbench, detached at `1031e93`. Its ignored `build/fleetlab-city/` still holds the stage inputs, the Node 22.23.4 toolchain and the City venv |
+| `…/Hermes-worktrees/fleetlab-workbench` | The release workbench, detached at `main` `083aab6` since 2026-11-14 (it was at `1031e93`). Its ignored `build/fleetlab-city/` still holds the stage inputs, the Node 22.23.4 toolchain and the City venv |
 | `…/Hermes-worktrees/ux-impl-20261104` | Not changed in this wave; the daily readback task runs its `readback.py` |
 
 ### Next actions, in order
