@@ -16,7 +16,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 | Release branch | `codex/fleetlab-uc03-20261115`, product commit `3bdb504`, local verification record `f3c0187d9048e9e61015aa5801ae7b5204a0f7ce`. |
 | Public release record | [docs/releases/fleetlab-current.json](docs/releases/fleetlab-current.json) binds the receipts for `3bdb504`. |
 | Live verification | Each production host matched 10,186/10,186 served files, 100/100 header checks and 128/128 smoke paths. The offline edition is 2,588,822 B, SHA-256 `7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1`. All 16 production footer checks showed “Date: Nov 15th, 2026”. |
-| Daily readback | The 09:00 local `fleetlab-daily-readback` task still expects `43d4153`. Its next check uses the previous release until its expected commit and stage record are updated together. The November 15 stage record has SHA-256 `1a3bb091252314aa05ecf831ba82f8c77415e588696bddd799eb15518c2476b3`. |
+| Daily readback | On 2026-11-15 the 09:00 local `fleetlab-daily-readback` task was updated to expect `3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8` on the stable site, using the full stage record (SHA-256 `1a3bb091252314aa05ecf831ba82f8c77415e588696bddd799eb15518c2476b3`). A manual run of the configured check finished at 22:59:17 UTC. All 10,186 served paths matched their expected HTTP status, length and SHA-256 on the first run (exit 0). Result SHA-256 `4d066b38aee07a94416827bd5835b5ffc51d573c121085045ded2d9745b5ba28`. |
 
 ### 2. What the site is
 
