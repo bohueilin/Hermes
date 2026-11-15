@@ -12,7 +12,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 |---|---|
 | Live site | Source `43d415379d611600731ef9d5ae60c93fc4ac3f75`, Pages deployment `febca83c`, uploaded by the owner on the evening of 2026-11-11. `publication.json` names it (checked 2026-11-11) |
 | Rollback | Pages deployment `273b73d6` (source `00d834f`), owner-operated, not rehearsed |
-| `main` | Contains the live line and its record: PR #31 merged the release branch at `43d4153` as `0df5948` (the same tree), and PR #32 merged this record (`aa360cc`) as `4ec54c7`. The site bytes on `main` are those of `43d4153`; the record commits change documentation only. Start all new work from `main` |
+| `main` | Holds the live line `43d4153` and its records: PR #31 merged the release as `0df5948` (the same tree as `43d4153`), PR #32 the release record as `4ec54c7`, and PRs #33 and #34 documentation follow-ups. Every commit on `main` after `43d4153` changes documentation only; `git diff --stat 43d4153 github/main` shows it. Start all new work from `main` |
 | Release branch | `claude/fleetlab-numbers-webkit-20261111` at `43d4153`. The earlier release branches `claude/fleetlab-fixes-20261110` (`00d834f`), `claude/fleetlab-perf-20261109` (`0b0fb05`) and `codex/fleetlab-ux-impl-20261104` (`5a4dafb`) stay on GitHub |
 | Public release record | [docs/releases/fleetlab-current.json](docs/releases/fleetlab-current.json) describes `43d4153` |
 | Live verification | Full byte readback 10,186 / 10,186 and headers 100 / 100 on the stable and the immutable host. Offline edition 2,588,236 B, SHA-256 `77534e343a3f53ee79255c079d5ad883eb4ca967540625732cde9b5c7e9f42c3`. Every footer checked reads "Date: Nov 11th, 2026" |
@@ -172,6 +172,24 @@ The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`, live since 2
 4. Build on a new branch from `main` and run the gates. For hosted bytes, also build the stage and run the stage check. Then ask the owner for the push, the pull request and the merge, each naming the branch and commit.
 5. After any release, update this block's §1 and §3, add a dated release section below it, and keep the older sections as records.
 
+### 8. Briefing Codex or another new agent
+
+A local checkout can lag GitHub by several merges, and its copy of this file then describes an older release. Brief a new agent with the prompt below, then add the task. It works for any FleetLab task and stays valid across releases, because every fact it needs is in this file.
+
+```
+You are continuing FleetLab, the public teaching website https://fleetlab.pages.dev, built from the public repository bohueilin/Hermes.
+
+1. Start from the current main. Run `git fetch github` (the remote is "github", not "origin") and create a new worktree from github/main under …/Hermes-worktrees/<purpose>, on a new branch. Do not plan from a checkout you have not compared with github/main. Never touch the release workbench's ignored build/fleetlab-city/.
+2. Read AGENTS.md, then HERMES_SOURCE_OF_TRUTH.md: the "where we are now" block (§1 to §8), then the newest dated release section, then the reading order in §7.
+3. Confirm the live release: https://fleetlab.pages.dev/publication.json must name the source commit in §1. If it does not, stop and say so.
+4. Before any design or code, report back in a few lines: the live commit and deployment, what the last wave changed, the open items in §6, and the §4 rules you will follow.
+5. Then propose; do not build. For each item give its cost class (§5 item 2), the files it touches and the bytes it will move. Build nothing until the owner approves items one by one.
+6. Keep every §4 rule: no push, pull request, merge or upload without the owner's message naming the branch and commit; no byte bound raised without the owner's authorization; stage named paths only; no local paths or private material in commits; record only checks you ran, with their outputs, and name what you did not check.
+7. Write every result into HERMES_SOURCE_OF_TRUTH.md on the same branch as the work (§4, results rule).
+
+The owner's task follows.
+```
+
 ## November 11, 2026 (evening) — FleetLab release `43d4153` live, production `febca83c`: the numbers and WebKit wave
 
 **Current release identity.** Read this section first. The earlier November 11 section below (`00d834f`) is superseded as the release record; what still applies from it is named at its top.
@@ -261,7 +279,7 @@ All copies moved together, as listed in the November 10 section, with the two de
 
 | # | Action | Who |
 |---|---|---|
-| 1 | Done 2026-11-11: this record merged as #32 (`4ec54c7`). Merge the results follow-up from `claude/fleetlab-sot-results-20261111` with a merge commit once CI passes | Owner, or an agent on the owner's message naming the branch and commit |
+| 1 | Done: the record merged as #32 (`4ec54c7`) and the results follow-up as #33 (`083aab6`) on 2026-11-11; the readback results followed as #34. Later documentation follow-ups merge the same way, each on the owner's word | Owner, or an agent on the owner's message naming the branch and commit |
 | 2 | Decide the open items in §6 of the block above (branch protection on `main`, a stage build in CI), starting from `main` | Owner |
 | 3 | Never tested on this release: real Safari, screen readers, a physical phone | Owner, on request |
 
