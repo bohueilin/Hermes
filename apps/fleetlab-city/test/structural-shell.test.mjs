@@ -19,7 +19,9 @@ test('City global shell is idempotent; local sections retain their handlers and 
   assert.equal(tabs.parentNode,main);assert.equal(tabs.previousSibling,intro);button.click();assert.equal(clicks,1);
   assert.equal(main.getAttribute('tabindex'),'-1','the skip link target can take focus');
   const menu=h.querySelector('.design-shell-menu');menu.click();assert.equal(menu.getAttribute('aria-expanded'),'true');assert.equal(h.querySelector('nav').getAttribute('data-expanded'),'true');
-  assert.equal(document.querySelector('footer time').getAttribute('datetime'),'2026-11-11');
+  const date=document.querySelector('footer time');
+  assert.equal(date.getAttribute('datetime'),'2026-11-15');
+  assert.equal(date.textContent,'Date: Nov 15th, 2026');
  }finally{restore();}
 });
 test('sources are a front door with a skip link and SF v1 orientation; download hrefs stay exact',()=>{

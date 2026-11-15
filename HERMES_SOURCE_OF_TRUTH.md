@@ -190,6 +190,30 @@ You are continuing FleetLab, the public teaching website https://fleetlab.pages.
 The owner's task follows.
 ```
 
+## UC-03 paired-run counter and November 15 footer · verified local stage
+
+**Tested and staged commit:** `3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8` on `codex/fleetlab-uc03-20261115`. The clean verification build completed on Node 22.23.4 and City Python 3.11.15. The localhost preview served that commit’s stage and publication manifest. Publication and hosted readback were not performed.
+
+| Local gate | Result at the tested commit |
+|---|---|
+| Packaging | Stage check 20/20; packaging tests 17/17; local preflight and complete stage verification passed. All 11 approved byte values matched exactly. Offline HTML was 2,588,822 B with 32,618 B reserve and SHA-256 `7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1`. Stage emitted text was 3,651,096 B and non-City bytes were 16,459,443. The 1,173,750 B compressed source offer had SHA-256 `0d7658ba6d508baa681aa99b812d981e5e2aecb00a7dcf2c352ae8ff2dae5aa0`. |
+| Python, lint and fixtures | Ruff and the whitespace check passed. With 130 hash-verified local fixtures, root pytest passed 1,675 (55 MetaDrive tests deselected). City Python passed 375. Hermes doctor reported 18 PASS and one optional display NOT_AVAILABLE. |
+| Node | City 349/349 and traffic 14/14. Playground passed 2,980 with 8 performance checks skipped and 1 existing TODO. With performance enabled, the complete retry passed 3,298, with 0 failures, 0 skipped and 1 TODO. |
+| Timing repeat | The first performance run exceeded the 8 ms limit in `run_window` (12.71 ms), `run_pair` (10.77 ms) and Scale intake (8.48 ms). All three passed twice in isolation on both baseline and candidate. The full retry measured 2.56 ms and 2.03 ms for window and pair respectively. The timing checks and thresholds stayed intact. |
+| Staged browser exercise | All 8 hosted checks and the offline check passed the UC-03 functional assertions. Chrome ran at 320, 390, 768 and 1280 px; Firefox and WebKit at 320 and 1280. All 44 counter states reconciled to 20 paired seeds, the verdict held and the median replay selected seed 1015. All hosted footers showed November 15. The offline run generated zero HTTP(S) requests. Each WebKit width reported the same ResizeObserver notification seen on baseline. |
+
+### Pre-pin measurements and implementation history
+
+The owner approved the local verification build. The offline size and digest, source-offer sizes, emitted-text and non-City bounds now use the approved values below. The 2.5 MiB offline cap and the six route closures retain their existing bounds.
+
+The paired experiment starts its progress counter and native bar at the planned execution total. For UC-03 the first frame reads “0 of 43 runs finished”. The running panel and valid verdict explain the 20 baseline runs, 20 candidate runs and three replay checks. The verdict and interval still use the 20 paired seeds. The hosted studio and shared footer display “Date: Nov 15th, 2026” with `datetime="2026-11-15"`.
+
+- With Node 22.23.4, `node --test --test-concurrency=1` on the store, experiment UI, experiment model and structural-shell test files reported **191 passed, 0 failed, 0 skipped**. The first-frame regression failed against the previous UI (20 vs 43). The date assertion failed against the previous shell (November 11 vs November 15).
+- `pack.mjs --out` produced a 2,588,822 B offline file (+586 B). `check-dist.mjs` returned OK. The measured candidate SHA-256 is `7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1`. The 2.5 MiB hard cap leaves 32,618 B. Hosted legacy text measures 2,627,257 B (+530 B), above the current 2,626,727 B bound. Exact pin updates and release qualification await owner review.
+- Chrome 157.0.8103.52 exercised a local hosted preview at 320 × 700 and 1280 × 900. Both runs showed all 44 counter states from 0/43 through 43/43 with a native maximum of 43, the explanation on the completed card, and the November 15 footer. The p90 wait difference was −572.8 s (paired 95% interval −656.8 to −490.5 s); the unserved-share guardrail held the result. Selecting the median replay showed seed 1015, 15 of 20. Both runs recorded zero horizontal overflow and zero runtime exceptions.
+- Chrome also passed at widths 390 and 768. Firefox 155 and WebKit 26.6 showed the same run, verdict, replay and date at 320 and 1280. WebKit reported one ResizeObserver notification while awaiting the verdict at each width on both the baseline and candidate. Chrome exercised the packed HTML from disk with networking disabled and observed zero HTTP(S) requests.
+- On the clean candidate, the local release build exited 1 at the legacy-text ceiling (2,627,257 > 2,626,727 B). Separate accounting reproduced the deployed receipt and source-offer hashes before measuring the candidate. Development/stage extracted source offers grew 549 B to 4,163,582 / 4,163,641 B and compressed offers grew 134 B to 1,173,691 / 1,173,750 B. With the two existing bounds, negative residuals add six receipt bytes. At zero residuals the proposed exact development/stage emitted-text values are 3,649,237 / 3,651,096 B and the non-City stage total is 16,459,443 B. The six route closure sizes, depot route-local bytes and hard offline limit are unchanged. Full release gates and publication remain pending.
+
 ## November 11, 2026 (evening) — FleetLab release `43d4153` live, production `febca83c`: the numbers and WebKit wave
 
 **Current release identity.** Read this section first. The earlier November 11 section below (`00d834f`) is superseded as the release record; what still applies from it is named at its top.

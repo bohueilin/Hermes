@@ -13,6 +13,10 @@ export const MODES = Object.freeze(["learn", "sandbox", "experiment"]);
 /** Engine paths the runtime reports (contract section 7). */
 export const ENGINE_PATHS = Object.freeze(["worker", "main thread"]);
 
+export function plannedExperimentRuns(seedCount) {
+  return 2 * seedCount + 3;
+}
+
 const DAY_S = 86400;
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -439,7 +443,7 @@ function experimentCase(state, action) {
           frozen: { spec, digest, label, frozenAt },
           status: "running",
           id: id ?? null,
-          progress: { done: 0, total: spec.seeds.length, label: "" },
+          progress: { done: 0, total: plannedExperimentRuns(spec.seeds.length), label: "" },
           error: null,
           verdict: null,
           perSeed: [],
