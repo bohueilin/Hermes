@@ -190,7 +190,19 @@ You are continuing FleetLab, the public teaching website https://fleetlab.pages.
 The owner's task follows.
 ```
 
-## UC-03 paired-run counter and November 15 footer · local candidate
+## UC-03 paired-run counter and November 15 footer · verified local stage
+
+**Tested and staged commit:** `3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8` on `codex/fleetlab-uc03-20261115`. The clean verification build completed on Node 22.23.4 and City Python 3.11.15. The localhost preview served that commit’s stage and publication manifest. Publication and hosted readback were not performed.
+
+| Local gate | Result at the tested commit |
+|---|---|
+| Packaging | Stage check 20/20; packaging tests 17/17; local preflight and complete stage verification passed. All 11 approved byte values matched exactly. Offline HTML was 2,588,822 B with 32,618 B reserve and SHA-256 `7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1`. Stage emitted text was 3,651,096 B and non-City bytes were 16,459,443. The 1,173,750 B compressed source offer had SHA-256 `0d7658ba6d508baa681aa99b812d981e5e2aecb00a7dcf2c352ae8ff2dae5aa0`. |
+| Python, lint and fixtures | Ruff and the whitespace check passed. With 130 hash-verified local fixtures, root pytest passed 1,675 (55 MetaDrive tests deselected). City Python passed 375. Hermes doctor reported 18 PASS and one optional display NOT_AVAILABLE. |
+| Node | City 349/349 and traffic 14/14. Playground passed 2,980 with 8 performance checks skipped and 1 existing TODO. With performance enabled, the complete retry passed 3,298, with 0 failures, 0 skipped and 1 TODO. |
+| Timing repeat | The first performance run exceeded the 8 ms limit in `run_window` (12.71 ms), `run_pair` (10.77 ms) and Scale intake (8.48 ms). All three passed twice in isolation on both baseline and candidate. The full retry measured 2.56 ms and 2.03 ms for window and pair respectively. The timing checks and thresholds stayed intact. |
+| Staged browser exercise | All 8 hosted checks and the offline check passed the UC-03 functional assertions. Chrome ran at 320, 390, 768 and 1280 px; Firefox and WebKit at 320 and 1280. All 44 counter states reconciled to 20 paired seeds, the verdict held and the median replay selected seed 1015. All hosted footers showed November 15. The offline run generated zero HTTP(S) requests. Each WebKit width reported the same ResizeObserver notification seen on baseline. |
+
+### Pre-pin measurements and implementation history
 
 The owner approved the local verification build. The offline size and digest, source-offer sizes, emitted-text and non-City bounds now use the approved values below. The 2.5 MiB offline cap and the six route closures retain their existing bounds.
 
