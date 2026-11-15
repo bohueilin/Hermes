@@ -373,6 +373,55 @@ describe("Freeze and run and the freeze rule (design §7.1)", () => {
     });
   });
 
+  for (const [pairs, total] of [[10, 23], [20, 43]]) {
+    test(`UC-03 counts all ${total} runs from freeze and explains the ${pairs} pairs on the verdict`, async () => {
+      await withDom({}, async () => {
+        const store = presetStore("UC-03", { replications: pairs });
+        const completion = Promise.withResolvers();
+        let progress;
+        const host = {
+          runExperiment(_args, { onProgress }) {
+            progress = onProgress;
+            return completion.promise;
+          },
+        };
+        const { container, view } = mount(store, { host });
+        const run = view.freezeAndRun();
+        const basis = `${total} planned runs: ${pairs} baseline + ${pairs} candidate + 3 replay checks. The verdict uses ${pairs} paired seeds.`;
+        function assertProgress(done) {
+          const running = container.querySelector('[data-role="running"]');
+          assert.equal(running.querySelector('[data-role="progress"]').textContent, `${done} of ${total} runs finished`);
+          assert.equal(running.querySelector("progress").getAttribute("max"), String(total));
+          assert.equal(running.querySelector("progress").getAttribute("value"), String(done));
+          const note = running.querySelector('[data-role="run-basis"]');
+          assert.equal(note.textContent, basis);
+          assert.equal(note.closest('[role="status"]'), null, "only the changing run count goes in the live region");
+        }
+        assertProgress(0);
+        const { spec } = store.getState().experiment.frozen;
+        const { messages, payload } = await runThroughWorkerHandler({ type: "run_experiment", spec });
+        const markers = messages.filter((m) => m.type === "progress");
+        assert.ok(markers.every((m) => m.total === total));
+        assert.equal(markers[0].done, 0);
+        assert.equal(markers.at(-1).done, total);
+        for (const marker of [markers[0], markers.at(-1)]) {
+          progress(marker);
+          assertProgress(marker.done);
+        }
+        completion.resolve(payload);
+        await run;
+        const card = container.querySelector('article.fl-verdict[data-validity="VALID"]');
+        const note = card.querySelector('[data-role="run-basis"]');
+        assert.equal(note.textContent, basis);
+        assert.equal(note.closest("details"), null, "the explanation stays visible after the counter disappears");
+        assert.equal(container.querySelector('[data-role="running"]'), null);
+        store.dispatch({ type: "experiment/draft", patch: { seedCount: 30 } });
+        const stale = container.querySelector("article.fl-stale");
+        assert.equal(stale.querySelector('[data-role="run-basis"]').textContent, basis, "the verdict keeps its frozen count after a draft edit");
+      });
+    });
+  }
+
   test("while running, progress shows by runs finished and Cancel reaches the host; Freeze and run is off", async () => {
     await withDom({}, async () => {
       const store = presetStore("UC-03");
@@ -393,6 +442,7 @@ describe("Freeze and run and the freeze rule (design §7.1)", () => {
       await tick();
       assert.equal(store.getState().experiment.status, "cancelled");
       assert.equal(container.querySelector('[data-role="cancelled"]').textContent, labels.STATES.cancelled);
+      assert.equal(container.querySelector('[data-role="run-basis"]'), null);
     });
   });
 
@@ -407,6 +457,7 @@ describe("Freeze and run and the freeze rule (design §7.1)", () => {
       await tick();
       assert.equal(container.querySelector('[data-role="engine-stopped"] p').textContent, labels.STATES.engineStopped);
       assert.equal(container.querySelector('[data-role="retry"]').textContent, labels.STATES.retry);
+      assert.equal(container.querySelector('[data-role="run-basis"]'), null);
     });
   });
 
@@ -722,6 +773,7 @@ describe("verdict card (design §7.2, P-7 to P-9)", () => {
         const { container } = mount(store, { primaryStrip: () => { drawn += 1; return null; } });
         const card = container.querySelector('article.fl-verdict[data-kind="teaching"]');
         assert.equal(card.getAttribute("data-validity"), "INVALID_EXPERIMENT");
+        assert.equal(card.querySelector('[data-role="run-basis"]'), null);
         for (const section of ["primary", "guardrails", "descriptives"]) assert.equal(card.querySelector(`[data-section="${section}"]`), null, `no ${section}`);
         assert.equal(drawn, 0, "no strip is drawn");
         assert.equal(card.querySelector('[data-gate="primary"]'), null, "no outcome");

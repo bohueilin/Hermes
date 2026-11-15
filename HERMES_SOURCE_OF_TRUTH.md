@@ -190,6 +190,14 @@ You are continuing FleetLab, the public teaching website https://fleetlab.pages.
 The owner's task follows.
 ```
 
+## UC-03 paired-run counter and November 15 footer · local candidate
+
+The paired experiment starts its progress counter and native bar at the planned execution total. For UC-03 the first frame reads “0 of 43 runs finished”. The running panel and valid verdict explain the 20 baseline runs, 20 candidate runs and three replay checks. The verdict and interval still use the 20 paired seeds. The hosted studio and shared footer display “Date: Nov 15th, 2026” with `datetime="2026-11-15"`.
+
+- With Node 22.23.4, `node --test --test-concurrency=1` on the store, experiment UI, experiment model and structural-shell test files reported **191 passed, 0 failed, 0 skipped**. The first-frame regression failed against the previous UI (20 vs 43). The date assertion failed against the previous shell (November 11 vs November 15).
+- `pack.mjs --out` produced a 2,588,822 B offline file (+586 B). `check-dist.mjs` returned OK. The measured candidate SHA-256 is `7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1`. The 2.5 MiB hard cap leaves 32,618 B. Hosted legacy text measures 2,627,257 B (+530 B), above the current 2,626,727 B bound. Exact pin updates and release qualification await owner review.
+- Chrome 157.0.8103.52 exercised a local hosted preview at 320 × 700 and 1280 × 900. Both runs showed all 44 counter states from 0/43 through 43/43 with a native maximum of 43, the explanation on the completed card, and the November 15 footer. The p90 wait difference was −572.8 s (paired 95% interval −656.8 to −490.5 s); the unserved-share guardrail held the result. Selecting the median replay showed seed 1015, 15 of 20. Both runs recorded zero horizontal overflow and zero runtime exceptions.
+
 ## November 11, 2026 (evening) — FleetLab release `43d4153` live, production `febca83c`: the numbers and WebKit wave
 
 **Current release identity.** Read this section first. The earlier November 11 section below (`00d834f`) is superseded as the release record; what still applies from it is named at its top.

@@ -558,14 +558,14 @@ describe("Experiment: draft, freeze, verdict and session log", () => {
     const s = frozenState();
     assert.deepEqual(s.experiment.frozen, { spec: fakeSpec(), digest: DIGEST, label: "playground-spec:3f9a1c2e", frozenAt: "14:02" });
     assert.equal(s.experiment.status, "running");
-    assert.deepEqual(s.experiment.progress, { done: 0, total: 10, label: "" });
+    assert.deepEqual(s.experiment.progress, { done: 0, total: 23, label: "" });
     assert.throws(() => reduce(s, { type: "experiment/freeze", id: "x2", spec: fakeSpec(), digest: DIGEST, label: "l" }), TypeError);
   });
 
   test("progress, error and cancel apply only to the running experiment", () => {
     const s = frozenState();
-    assert.equal(step(s, { type: "experiment/progress", id: "x1", done: 7, total: 10, label: "Seed 7 of 10, both arms" }).experiment.progress.done, 7);
-    assert.equal(reduce(s, { type: "experiment/progress", id: "old", done: 7, total: 10, label: "" }), s);
+    assert.equal(step(s, { type: "experiment/progress", id: "x1", done: 7, total: 23, label: "Seed 3 of 10, baseline arm" }).experiment.progress.done, 7);
+    assert.equal(reduce(s, { type: "experiment/progress", id: "old", done: 7, total: 23, label: "" }), s);
     const failed = step(s, { type: "experiment/error", id: "x1", message: "stopped" });
     assert.equal(failed.experiment.status, "error");
     assert.equal(failed.experiment.error, "stopped");

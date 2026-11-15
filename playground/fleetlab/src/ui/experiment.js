@@ -47,7 +47,7 @@ import { metricSubject, metricWords, verdictCharts } from "./charts.js";
 import { el, withArrows } from "./dom.js";
 import * as format from "./format.js";
 import * as labels from "./labels.js";
-import { ENGINE_PATHS, sandboxChangesSinceFreeze } from "./store.js";
+import { ENGINE_PATHS, plannedExperimentRuns, sandboxChangesSinceFreeze } from "./store.js";
 
 /** Axes FleetLab's own grammar can run (design P-0): one `parameter:` axis over a numeric FleetLab scenario field. */
 export const FLEETLAB_AXES = Object.freeze(["parameter:DEP-6", "parameter:DEP-7", "parameter:RID-1"]);
@@ -1448,9 +1448,14 @@ export function mountExperiment(container, { store, host, copy = null, now = wal
     return actions;
   }
 
+  function pairedRunBasis(seedCount) {
+    return el("p", { class: "fl-muted", "data-role": "run-basis" },
+      `${plannedExperimentRuns(seedCount)} planned runs: ${seedCount} baseline + ${seedCount} candidate + 3 replay checks. The verdict uses ${seedCount} paired seeds.`);
+  }
+
   function progressView(state) {
     const ex = state.experiment;
-    const children = [heading(2, labels.VERDICT.running), el("p", { class: "fl-teaching-chip" }, labels.HONESTY.verdictChip)];
+    const children = [heading(2, labels.VERDICT.running), el("p", { class: "fl-teaching-chip" }, labels.HONESTY.verdictChip), pairedRunBasis(ex.frozen.spec.seeds.length)];
     if (ex.progress !== null) {
       children.push(el("p", { role: "status", "data-role": "progress" }, labels.experimentRunProgress(ex.progress.done, ex.progress.total)),el("progress",{max:ex.progress.total,value:ex.progress.done,"aria-label":"Experiment runs finished"}));
     }
@@ -1482,7 +1487,7 @@ export function mountExperiment(container, { store, host, copy = null, now = wal
     // The header names the change actually tested, because a preset's title stays on screen over an edited axis.
     const axis = ex.frozen.spec.axis, knob = axis.id.startsWith("policy:") ? parseAxis(axis.id).knob : axis.id.slice("parameter:".length);
     const tested = el("p", { "data-role": "change-tested" }, `Change tested: ${differenceText({ knob, from: axis.baseline, to: axis.candidate })}`);
-    const card = renderVerdictCard(view, { ui, rerender: render, strip, rails, notices: [tested, ...freezeNotices(state)], actions: verdictActions(state, view) });
+    const card = renderVerdictCard(view, { ui, rerender: render, strip, rails, notices: [tested, ...(view.validity === "VALID" ? [pairedRunBasis(view.replications)] : []), ...freezeNotices(state)], actions: verdictActions(state, view) });
     if (ex.verdictStale) card.setAttribute("class", "fl-verdict fl-stale");
     return card;
   }
