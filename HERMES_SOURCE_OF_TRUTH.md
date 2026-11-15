@@ -192,6 +192,8 @@ The owner's task follows.
 
 ## UC-03 paired-run counter and November 15 footer · local candidate
 
+The owner approved the local verification build. The offline size and digest, source-offer sizes, emitted-text and non-City bounds now use the approved values below. The 2.5 MiB offline cap and the six route closures retain their existing bounds.
+
 The paired experiment starts its progress counter and native bar at the planned execution total. For UC-03 the first frame reads “0 of 43 runs finished”. The running panel and valid verdict explain the 20 baseline runs, 20 candidate runs and three replay checks. The verdict and interval still use the 20 paired seeds. The hosted studio and shared footer display “Date: Nov 15th, 2026” with `datetime="2026-11-15"`.
 
 - With Node 22.23.4, `node --test --test-concurrency=1` on the store, experiment UI, experiment model and structural-shell test files reported **191 passed, 0 failed, 0 skipped**. The first-frame regression failed against the previous UI (20 vs 43). The date assertion failed against the previous shell (November 11 vs November 15).
