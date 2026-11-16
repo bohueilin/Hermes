@@ -75,3 +75,78 @@ test('8 hosted pages at 320, 390, 768 and 1280 px have no page-level horizontal 
  }
  assert.equal(problems.length,0,problems.join('\n'));
 });
+
+test('completed regional windows fit their sidebar; wait populations are visible in paired and scale results at both widths',{skip:chrome.skip,timeout:120000},async t=>{
+ const browser=await launchChrome(chrome.path);t.after(()=>browser.close());
+ const server=await serveSite(hostedSite());t.after(()=>server.close());
+ // This function runs in the actual page, so text range rectangles include wrapping and font metrics.
+ async function exercise(route){
+  const main=document.querySelector('main:not([hidden])');
+  const visible=node=>node&&node.checkVisibility()&&node.getBoundingClientRect().width>0;
+  const button=prefix=>[...main.querySelectorAll('button')].find(b=>visible(b)&&(b.textContent.trim().startsWith(prefix)||b.getAttribute('aria-label')===prefix));
+  const wait=async(predicate,name)=>{
+   const deadline=performance.now()+15000;
+   while(!predicate()){if(performance.now()>deadline)throw Error('Timed out waiting for '+name);await new Promise(resolve=>setTimeout(resolve,25));}
+  };
+  const click=async name=>{await wait(()=>button(name)&&!button(name).disabled,name);button(name).click();};
+  await document.fonts.ready;
+  const width=innerWidth,before=document.documentElement.scrollWidth;
+  if(route.startsWith('regional')){
+   if(width===320)await click('Knobs ·');
+   await click('Run window');
+   await wait(()=>main.querySelectorAll('[data-role="across-table"] tbody tr').length===5&&/seed 1001/i.test(main.querySelector('[data-role="now-chip"]')?.textContent||''),'five replications and the selected seed');
+   if(width===320&&main.querySelector('.fl-knobs')?.dataset.open==='true')await click('Close knobs');
+   if(width===320){
+    const across=main.querySelector('button[data-group="across"]');
+    if(!visible(across))throw Error('Across replications tab is hidden');
+    across.click();
+   }
+   const sidebar=main.querySelector('.fl-side').getBoundingClientRect();
+   const rows=[...main.querySelectorAll('[data-role="across-rows"] [data-row]')].map(row=>[...row.children].map(span=>{
+    const range=document.createRange();range.selectNodeContents(span);
+    return {text:span.innerText,inside:visible(span)&&[...range.getClientRects()].every(rect=>rect.width>0&&rect.left>=sidebar.left-1&&rect.right<=sidebar.right+1)&&span.scrollWidth<=span.clientWidth+1};
+   }));
+   return {width,before,after:document.documentElement.scrollWidth,rows};
+  }
+  if(route.startsWith('experiments')){
+   await click('Run the paired comparison');
+   await wait(()=>main.querySelector('article.fl-verdict[data-validity="VALID"]'),'paired verdict');
+   const card=main.querySelector('article.fl-verdict'),exact=card.querySelector('.teaching-exact');
+   const population='Rider waits measure request to pickup for completed rides. Bay waits measure intake end to first task start for visits that started a task, including zero waits.';
+   const notes=()=>[...card.querySelectorAll('p')].filter(node=>visible(node)&&node.textContent===population&&!node.closest('details')).length;
+   const closed=notes(),result=card.innerText;
+   exact.querySelector('summary').click();
+   const record=JSON.parse(exact.querySelector('pre').innerText);
+   return {width,before,after:document.documentElement.scrollWidth,closed,opened:notes(),result,exactOpen:exact.open,metric:record.primary.metric,pairs:record.replications};
+  }
+  await click('Run the paired test');
+  await wait(()=>main.querySelector('.scale-result table'),'Response reserve tables');
+  const output=main.querySelector('.scale-result');
+  return {width,before,after:document.documentElement.scrollWidth,heads:[...output.querySelectorAll('th')].filter(visible).map(e=>e.textContent),captions:[...output.querySelectorAll('caption')].filter(visible).map(e=>e.textContent)};
+ }
+ for(const width of [320,1280]){
+  for(const route of ['regional?lesson=bay_teaching_map','regional?lesson=L1','regional?lesson=L3','experiments?lesson=UC-03','experiments?lesson=OPS-03','scale-lab?lesson=response-reserve']){
+   const page=await browser.newPage();
+   try{
+    await page.emulate({width,height:width===320?800:900,mobile:width===320});
+    await page.navigate(server.origin+'/#/'+route);
+    const data=await page.evaluate('('+exercise.toString()+')('+JSON.stringify(route)+')'),id=route+' at '+width;
+    assert.equal(data.width,width,id);
+    assert.ok(data.before<=width&&data.after<=width,id+' overflow: '+[data.before,data.after]);
+    if(route.startsWith('regional')){
+     assert.equal(data.rows.length,2,id);
+     assert.match(data.rows[0][0].text,/wait p90.*completed rides/);
+     assert.match(data.rows[0][1].text,/in every replication, from [\d,]+ completed rides/);
+     for(const row of data.rows){assert.equal(row.length,2);for(const cell of row)assert.ok(cell.text&&cell.inside,id+' clipped '+cell.text);}
+    }else if(route.startsWith('experiments')){
+     assert.deepEqual([data.closed,data.opened,data.exactOpen,data.pairs],[1,1,true,20],id);
+     if(route.endsWith('UC-03')){assert.equal(data.metric,'wait.p90_s');assert.match(data.result,/wait p90 -572\.8 s/);}
+     else{assert.match(data.metric,/^unserved\.fraction/);assert.match(data.result,/13\.3 min/);}
+    }else{
+     assert.ok(data.heads.includes('Mean wait per answered request (vehicles and responders)'),id);
+     assert.ok(data.captions.some(s=>s.includes('Simulated mean waits count answered vehicle requests and responder calls.')),id);
+    }
+   }finally{await page.close();}
+  }
+ }
+});

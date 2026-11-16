@@ -36,7 +36,18 @@ const energy=Object.values(CAPACITY_REGIMES[regime].energy_j).some(j=>j>0);
 return caseCells(regime,altRule).map(({case:c,label,changed,cell_id})=>{
 const m=metricsOf(manifest,cell_id),u=m?.utilization;
 if(!m)return {case:c,label,changed,cell_id,available:false,on_time:null,missed:null,late:null,unfinished_due:null,lateness_text:'Not in the accepted study',capacity_text:'Not in the accepted study'};
-return {case:c,label,changed,cell_id,available:true,on_time:m.on_time,missed:m.missed,late:m.late,unfinished_due:m.unfinished_due,
+const knownPair={
+data_heavy:'5ff55441ba280e6f9287efd5655e63ac3816c63fceae443c5c43065a9f7c32bf e03952c251ca751285411db3eb88c850b275995f79366c4e9e6adcac43112989',
+energy_heavy:'4cfead9955fd30756e814d025e5904897a9865f56c0c22c6279049e691e896f9 c669a0269559fbb8b29116604862c6f445c492229857b2598312b8dea05c26d0',
+mixed:'5e17d571be5c9c46d6e71b80a5717fb59a44447764dcea3d61c8552acc5d77b3 da4188edbc8c766b640a89aece1f45a7ba43849b4b34ee3d5387b9cc077a13a8',
+};
+const matched=c==='bandwidth'&&!withheldReason(manifest,regime,altRule)&&[caseCells(regime,altRule)[0].cell_id,cell_id].map(id=>manifest.cells.find(cell=>cell.cell_id===id)?.record_digest).join(' ')===knownPair[regime];
+const example=matched?{
+data_heavy:'Faster uploads leave A1, A2 and A3 half a minute late. Each finishes its two-minute local step after its target. No charging is required.',
+energy_heavy:'Faster upload leaves A1 ready at minute 12 in both cases. Charging sets its release time in both.',
+mixed:'A1 finishes upload plus its local step at minute 10.5 instead of 39.4. Charging now sets release at minute 12, two minutes late.',
+}[regime]:null;
+return {case:c,label,changed:example?`${changed} ${example}`:changed,cell_id,available:true,on_time:m.on_time,missed:m.missed,late:m.late,unfinished_due:m.unfinished_due,
 lateness_text:latenessText(m),
 capacity_text:`Uplink ${percent(u.uplink_bytes_served,u.uplink_bytes_available,'bytes')} · site feed ${energy&&u.site_j_available?percent(u.site_j_served,u.site_j_available,'energy'):'not needed'}`};
 });

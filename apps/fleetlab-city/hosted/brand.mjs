@@ -90,7 +90,7 @@ export function decorateShell(doc=document){
    for(const text of p.childNodes)if(text.nodeType===3)text.textContent=text.textContent.replace(/Not affiliated with or endorsed by[^.]*\.\s*/g,'');
   }
   if(!footer.querySelector('nav'))footer.appendChild(el('nav',{'aria-label':'Footer navigation'},[['Explore','catalog'],['About & limits','approach'],['Guided walkthrough','walkthrough']].map(([label,route])=>el('a',{href:'/#/'+route},label))));
-  if(!footer.classList.contains('studio-footer')&&!footer.querySelector('time'))footer.appendChild(el('time',{datetime:'2026-11-15'},'Date: Nov 15th, 2026'));
+  if(!footer.classList.contains('studio-footer')&&!footer.querySelector('time'))footer.appendChild(el('time',{datetime:'2026-11-16'},'Date: Nov 16th, 2026'));
  }
  if(sources&&main){
   if(!main.id)main.id='source-content';
@@ -107,6 +107,8 @@ export function decorateShell(doc=document){
 export function decorateCityOrientation(doc=document){
  const el=(...a)=>node(doc,...a),limits=doc.getElementById('limits-view'),ledger=doc.getElementById('qualification-ledger');
  if(ledger&&!doc.getElementById('design-ledger-lead'))ledger.parentNode.insertBefore(el('p',{id:'design-ledger-lead'},'Read this as a checklist of unresolved map questions: are road classes represented, have restrictions been inspected, and do gaps remain across districts? A failed or unfinished check stays open even when the files agree with their recorded hashes.'),ledger);
+ const banner=doc.querySelector('#legacy-study .result-banner');
+ if(banner&&!doc.getElementById('legacy-map-context'))banner.parentNode.insertBefore(el('p',{id:'legacy-map-context'},'These twelve pairs and their replay use frozen SF v1 (1.94% of eligible road length unsupported). The v2 (1.32%) and v3 (0.99%) atlas candidates have no fleet results. The recorded notebook outcome is INCOMPLETE. SF map acceptance remains HOLD.'),banner);
  const correction=[...(limits?.querySelectorAll('.panel')??[])].find(p=>p.querySelector('h3')?.textContent.startsWith('Method correction'));
  if(correction&&!correction.querySelector('details')){
   const record=correction.querySelector('p');if(record){const details=el('details',{},el('summary',{},'Exact recorded terms and correction'));details.appendChild(record);correction.appendChild(el('p',{},'The lower-energy example could not reach a depot; it did not cross the reserve threshold. Its lower-demand follow-up used one seed, so it does not establish a general result. The nominal battery-capacity label is not used by the engine.'));correction.appendChild(details);}
@@ -229,7 +231,8 @@ export function decorateDepotPipes(doc=document){
  for(const row of tile.querySelectorAll('p[data-arm]')){
   const seconds=Number(row.querySelector('.technical-only')?.textContent.match(/(\d+) s/)?.[1]);if(!Number.isFinite(seconds))continue;
   let mean=row.querySelector('.depot-visit-mean');if(!mean){mean=el('span',{class:'depot-visit-mean'});row.appendChild(mean);}
-  const text=` Across ${count} visits: ${/at least/.test(row.querySelector('strong')?.textContent||'')?'at least ':''}${(seconds/count).toFixed(1)} s observed per visit (${Math.floor(Math.round(seconds/count/60)/60)} h ${Math.round(seconds/count/60)%60} min).`;
+  const bound=/at least/.test(row.querySelector('strong')?.textContent||''),average=seconds/count;
+  const text=bound?` Across ${count} visits: at least ${(Math.floor(seconds*10/count)/10).toFixed(1)} s observed per visit (lower bound, work unfinished).`:` Across ${count} visits: ${average.toFixed(1)} s observed per visit (${Math.floor(Math.round(average/60)/60)} h ${Math.round(average/60)%60} min).`;
   if(mean.textContent!==text)mean.textContent=text;
  }
 }

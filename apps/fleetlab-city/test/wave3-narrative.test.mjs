@@ -30,4 +30,33 @@ test('every image built for a hidden studio route is lazy before its src is set'
 import {createStreetLab} from '../../../playground/fleetlab/src/ui/street-lab.js';
 import {STREET_NETWORK} from '../../../playground/fleetlab/src/model/street-network.js';
 test('Street shows a human request label and retains the actual identifiers in details',async()=>{const restore=installFakeDom();let lab;try{lab=createStreetLab();document.body.appendChild(lab.element);const intro=lab.element.querySelector('.street-intro'),items=[...intro.children];assert.ok(items.indexOf(intro.querySelector('button'))<items.indexOf(intro.querySelector('.street-model-class')));assert.match(intro.querySelector('.street-model-class').textContent,/mesoscopic.*not lane-level/);lab.setConfig({duration_minutes:10,background_per_hour:0});await lab.run();let found=false;for(let time=0;time<=600;time+=5){lab.seek(time);const car=lab.getState().run.frames[Math.floor(time/5)]?.vehicles[0];if(car?.request_id){const detail=lab.element.querySelector('.street-vehicle-detail');assert.match(detail.textContent,/Rider request/);const raw=detail.querySelector('.street-raw-identifiers');assert.ok(raw);assert.ok(raw.textContent.includes(car.request_id));if(car.route_id)assert.ok(raw.textContent.includes(car.route_id));found=true;break;}}assert.ok(found,'probe sees an assigned rider');const buttons=lab.element.querySelectorAll('.street-queue-list button');if(buttons.length){buttons[0].click();const raw=lab.element.querySelector('.street-block-detail .street-raw-identifiers');assert.ok(STREET_NETWORK.edges.some(edge=>raw.textContent.includes(edge.id)));}}finally{lab?.destroy();restore();}});
-test('tour keeps its exact three destinations, five-minute outcomes and finish after repeat decoration',()=>{const restore=installFakeDom();try{const home=document.createElement('main');home.className='studio-overview';document.body.appendChild(home);decorateVisitors(document);decorateVisitors(document);const tours=home.querySelectorAll('.visitor-tour');assert.equal(tours.length,1);const tour=tours[0];assert.equal(tour.querySelector('h2').textContent,'The 15-minute tour');assert.deepEqual([...tour.querySelectorAll('a')].map(n=>n.getAttribute('href')),['/#/walkthrough','/network-flows/dispatch/','/city-explorer/#compare']);for(const item of tour.querySelectorAll('li')){assert.match(item.textContent,/5 min/);assert.match(item.textContent,/You leave knowing/);}assert.match(tour.textContent,/3-minute starter/);assert.match(tour.textContent,/Monday/);assert.equal(home.querySelectorAll('.visitor-outside-model').length,1);}finally{restore();}});
+test('Home and About tours distinguish the browser runs from the recorded study',()=>{
+ const restore=installFakeDom(),prior=globalThis.MutationObserver;let studio;
+ globalThis.MutationObserver=class{observe(){}disconnect(){}};
+ try{
+  const root=document.createElement('div');document.body.appendChild(root);
+  studio=mountStudio({root,store:createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()})),playback:{pause(){}},present:{open(){},close(){}}});
+  const boundary=studio.element.querySelector('.welcome-boundary');
+  const scope=studio.element.querySelector('.approach-scope');
+  const locked=[boundary.textContent,scope.textContent];
+  mountCityEntry(document);
+  const destinations=['/#/walkthrough','/network-flows/dispatch/','/city-explorer/#compare'];
+  for(const [route,selector] of [['#/overview','.studio-overview'],['#/approach','.studio-approach']]){
+   studio.applyRoute(route);decorateVisitors(document);decorateVisitors(document);
+   const surface=studio.element.querySelector(selector),tours=surface.querySelectorAll('.visitor-tour');
+   assert.equal(tours.length,1,route);
+   const tour=tours[0],mode=tour.querySelector('h2').nextSibling;
+   assert.equal(tour.querySelector('h2').textContent,'The 15-minute tour');
+   assert.equal(mode.textContent,'After the 3-minute starter, run Walkthrough and Dispatch in your browser, then read a recorded City study.');
+   assert.equal(mode.closest('.welcome-boundary,.approach-scope,.design-honesty'),null);
+   assert.deepEqual(tour.querySelectorAll('a').map(a=>a.getAttribute('href')),destinations);
+   assert.deepEqual(tour.querySelectorAll('a').map(a=>a.textContent),['Walkthrough · 5 min →','Dispatch lesson · 5 min →','City Explorer notebook · 5 min →']);
+   for(const item of tour.querySelectorAll('li'))assert.match(item.textContent,/You leave knowing/);
+   assert.match(tour.querySelector('.visitor-tour-finish').textContent,/Monday/);
+   assert.equal(surface.querySelectorAll('.visitor-outside-model').length,1);
+  }
+  const cards=studio.element.querySelectorAll('.start-points .start-card .eyebrow');
+  assert.deepEqual(cards.map(n=>n.textContent),['FLEET DAY · RUN A MODEL','SAN FRANCISCO · RECORDED STUDY','STREET LAB · RUN A MODEL']);
+  assert.deepEqual([boundary.textContent,scope.textContent],locked);
+ }finally{studio?.destroy();globalThis.MutationObserver=prior;restore();}
+});

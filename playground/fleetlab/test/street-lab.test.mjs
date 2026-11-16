@@ -93,7 +93,7 @@ test('confirmed defect: the followed AV detail never prints null, undefined or N
   assert.equal(lab.element.querySelector('[aria-label="Inspect street AV"]').value,'AV-01');assert.equal(lab.getState().time,0);
   assert.match(lab.element.querySelector('.street-vehicle-detail').textContent,/At Financial District · 0 completed journeys/);clean('minute 0 after the comparison');
   const rows=lab.element.querySelectorAll('.street-comparison tbody tr').map(r=>r.querySelectorAll('th,td').map(c=>c.textContent)),value=t=>Number(t.replaceAll(',','').match(/^[+-]?[\d.]+/)[0]);
-  assert.deepEqual(rows.slice(1,3).map(r=>r[0]),['Mean pickup wait, boarded riders','Mean passenger time, completed only']);
+  assert.deepEqual(rows.slice(1,4).map(r=>r[0]),['Boarded riders in pickup mean, of 71 requests','Mean pickup wait, boarded riders','Mean passenger time, completed only']);
   for(const [title,free,queue,change] of rows)assert.equal(value(change),Math.round((value(queue)-value(free))*10)/10,`${title}: Change is the shown difference`);
   lab.seek(600);clean('minute 10, passenger on board');lab.seek(0);clean('back at minute 0');
   lab.element.querySelector('.street-replay-variant').querySelectorAll('button')[1].click();clean('queue-aware replay at minute 0');
@@ -107,4 +107,31 @@ test('a long run hands the page back between slices, so destroying the lab mid-r
   assert.equal(lab.getState().run,null,'the destroyed run records nothing');
   assert.equal(lab.element.querySelector('.street-status').textContent,'Building the street experiment…','no error replaces the busy status');
  }finally{restore();}
+});
+
+test('every street comparison puts its actual boarded populations immediately above the mean pickup waits',async()=>{
+ const restore=installFakeDom(),lab=createStreetLab({reducedMotion:()=>true});
+ try{
+  const presets=lab.element.querySelectorAll('.street-presets button');
+  assert.equal(presets.length,6);
+  for(const preset of presets){
+   preset.click();
+   await lab.run(true);
+   const results=lab.element.querySelector('.street-results');
+   const rows=results.querySelectorAll('.street-comparison tbody tr').map(row=>row.children.map(cell=>cell.textContent));
+   const waitIndex=rows.findIndex(row=>row[0]==='Mean pickup wait, boarded riders');
+   assert.ok(waitIndex>0);
+   const replays=lab.element.querySelectorAll('.street-replay-variant button');
+   const summaries=replays.map(replay=>{replay.click();return lab.getState().run.summary;});
+   const [base,candidate]=summaries;
+   assert.equal(base.requests,candidate.requests);
+   const delta=candidate.boarded-base.boarded;
+   assert.deepEqual(rows[waitIndex-1],[`Boarded riders in pickup mean, of ${base.requests} requests`,String(base.boarded),String(candidate.boarded),delta>0?'+'+delta:String(delta)]);
+   assert.match(results.textContent,/Dispatch still selects the nearest available anchor by straight-line distance/);
+   if(preset.textContent==='Bridge rush'){
+    assert.deepEqual(rows[waitIndex-1].slice(1),['50','53','+3']);
+    assert.deepEqual(rows[waitIndex].slice(1),['19.1 min','18.6 min','-0.5 min']);
+   }
+  }
+ }finally{lab.destroy();restore();}
 });

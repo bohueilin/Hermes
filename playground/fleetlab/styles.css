@@ -189,6 +189,7 @@ border-radius:6px;
 .fl-map__stamp {position:absolute;right:8px;bottom:8px;color:var(--faint-text);font-size:12px;}
 
 .fl-now__row {display:flex;justify-content:space-between;gap:8px;}
+.fl-side .fl-now__row {flex-wrap:wrap;}
 .fl-now__row > :last-child {font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-align:end;}
 
 .fl-segmented {gap:2px;padding:2px;border:1px solid var(--rule-strong);border-radius:6px;}

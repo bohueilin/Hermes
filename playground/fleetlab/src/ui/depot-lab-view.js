@@ -73,8 +73,8 @@ const least=(v,m,f=minutesText)=>{const x=f(v);return censored(m)?`at least ${x[
 // Headline tiles (registry C1.6 rows): main display text, optional companion text and the exact machine values.
 const TILES=[
  ['release.on_time_count',m=>{const [a,d,u]=['on_time_count','due_count','unfinished_due_count'].map(k=>at(m,`release.${k}`));if([a,d,u].includes(undefined))return null;return d===0?['Not applicable','no visit is due by the end of the run','release.due_count 0']:[`${numberText(a)} of ${numberText(d)} due by end`,`${visits(u)} due and not released`,`release.on_time_count ${a}; release.due_count ${d}; release.unfinished_due_count ${u}`];}],
- ['visit.overdue_s',m=>{const v=at(m,'visit.overdue_s');return v===undefined?null:[least(v,m),censored(m)?'(more may follow)':null,`${v} s`];}],
- ['visit.turnaround_observed_s',m=>{const v=at(m,'visit.turnaround_observed_s'),c=censored(m);return v===undefined?null:[least(v,m,hoursText),c?'(more may follow)':null,`${v} s`];}],
+ ['visit.overdue_s',m=>{const v=at(m,'visit.overdue_s');return v===undefined?null:[least(v,m),censored(m)?'(lower bound, work unfinished)':null,`${v} s`];}],
+ ['visit.turnaround_observed_s',m=>{const v=at(m,'visit.turnaround_observed_s'),c=censored(m);return v===undefined?null:[least(v,m,hoursText),c?'(lower bound, work unfinished)':null,`${v} s`];}],
  ['release.unreleased_count',m=>{const v=at(m,'release.unreleased_count');return v===undefined?null:[visits(v),null,`${v} visits`];}],
 ];
 const tiles=r=>el('div',{class:'tiles'},TILES.map(([id,f])=>el('article',{'data-term':id},[el('h3',{},plain(id)),tech(id,'p'),...arms(r).map(a=>{const x=f(metricsOf(r,a));return el('p',{'data-arm':a},x?[`${ARM[a]}: `,el('strong',{},x[0]),x[1]&&` ${x[1]}`,tech(` ${x[2]}`)]:`${ARM[a]}: ${NOT_AVAILABLE}`);})])));

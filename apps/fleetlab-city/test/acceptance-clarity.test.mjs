@@ -71,3 +71,26 @@ test('missing, malformed, unknown-version or incompatible results cannot acquire
     assert.match(result.headline,/unavailable/i);
   }
 });
+
+test('direct legacy notebook entry labels the frozen map beside its recorded recommendation',async()=>{
+ const {installFakeDom}=await import('../../../playground/fleetlab/test/helpers/fake-dom.mjs');
+ const {decorateCityOrientation}=await import('../hosted/brand.mjs');
+ const restore=installFakeDom();
+ try{
+  const compare=document.createElement('section'),legacy=document.createElement('div'),power=document.createElement('div');
+  compare.id='compare-view';legacy.id='legacy-study';power.id='power-study';
+  document.body.appendChild(compare);compare.append(legacy,power);
+  const banner=document.createElement('div'),other=document.createElement('div');
+  banner.className='result-banner';other.className='result-banner';power.appendChild(other);
+  decorateCityOrientation(document);assert.equal(document.getElementById('legacy-map-context'),null);
+  legacy.appendChild(banner);
+  const outcome=document.createElement('h3');outcome.id='outcome';outcome.textContent='City recommendation withheld';banner.appendChild(outcome);
+  decorateCityOrientation(document);decorateCityOrientation(document);
+  const notes=legacy.querySelectorAll('#legacy-map-context');
+  assert.equal(notes.length,1);assert.equal(notes[0].nextSibling,banner);
+  assert.match(notes[0].textContent,/twelve pairs and their replay use frozen SF v1 \(1\.94% of eligible road length unsupported\)/);
+  assert.match(notes[0].textContent,/v2 \(1\.32%\) and v3 \(0\.99%\) atlas candidates have no fleet results/);
+  assert.match(notes[0].textContent,/notebook outcome is INCOMPLETE\. SF map acceptance remains HOLD/);
+  assert.equal(outcome.textContent,'City recommendation withheld');assert.equal(power.querySelector('#legacy-map-context'),null);
+ }finally{restore();}
+});

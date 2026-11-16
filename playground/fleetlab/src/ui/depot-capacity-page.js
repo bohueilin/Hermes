@@ -150,7 +150,7 @@ const chapterButtons=['Constraint','Consequence','Trade-off'].map(name=>button(n
 const guideNext=button('Next snapshot',()=>{if(!comparison||job)return;ensureGuide();guide.next();announce(guide.getState().shot.caption);},{'data-guide-next':''});
 const utilization=el('div',{class:'capacity-utilization'});
 const focal=el('div',{class:'capacity-focal'},[
-el('div',{class:'capacity-guide-controls'},[el('div',{class:'capacity-chapters',role:'group','aria-label':'Guided chapters'},chapterButtons),guidePlay,guideNext]),
+el('div',{class:'capacity-guide-controls'},[el('div',{class:'capacity-chapters',role:'group',tabindex:'-1','aria-label':'Guided chapters'},chapterButtons),guidePlay,guideNext]),
 guideLoading,guideCancel,guideState,guideCaption,clock,bench.element,
 ]);
 const inspect=el('section',{class:'capacity-inspect','aria-label':'Which vehicles changed, and why?',hidden:true},[
@@ -337,7 +337,7 @@ async function watch(){
 if(destroyed||!complete.complete)return;cancelLoad();player?.pause('watch');guideToken=guide.request();
 inspect.hidden=false;focal.setAttribute('data-loading','true');guideCaption.textContent='The guide appears here after all four fixed records pass their checks.';
 // Navigate only on Watch, never on asynchronous acceptance.
-element.querySelector('#capacity-comparison').focus({preventScroll:true});
+focal.querySelector('.capacity-chapters').focus({preventScroll:true});
 focal.scrollIntoView({block:'start',behavior:'instant'});
 return load(guideToken);
 }
