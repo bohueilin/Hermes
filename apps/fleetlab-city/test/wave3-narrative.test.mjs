@@ -38,8 +38,8 @@ test('Home and About tours distinguish the browser runs from the recorded study'
   studio=mountStudio({root,store:createStore(createInitialState({presetId:'bay_teaching_map',scenario:defaultScenario()})),playback:{pause(){}},present:{open(){},close(){}}});
   const boundary=studio.element.querySelector('.welcome-boundary');
   const scope=studio.element.querySelector('.approach-scope');
-  const locked=[boundary.textContent,scope.textContent];
   mountCityEntry(document);
+  const locked=[boundary.textContent,scope.textContent];
   const destinations=['/#/walkthrough','/network-flows/dispatch/','/city-explorer/#compare'];
   for(const [route,selector] of [['#/overview','.studio-overview'],['#/approach','.studio-approach']]){
    studio.applyRoute(route);decorateVisitors(document);decorateVisitors(document);
