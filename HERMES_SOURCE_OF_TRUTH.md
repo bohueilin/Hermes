@@ -1,6 +1,6 @@
 # Hermes — Source of Truth
 
-## FleetLab: where we are now (read this first), 2026-11-15
+## FleetLab: where we are now (read this first), 2026-11-16
 
 This block is the single entry point for anyone continuing FleetLab: the owner, Codex, Muse, Argon, or a new Claude or Codex session. It summarises the current state and how work is done. The dated sections below it are the release records, newest first. They hold the detail and the evidence trail, and they win where this summary is shorter.
 
@@ -10,19 +10,19 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 
 | What | State |
 |---|---|
-| Live site | Source `3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8`. The owner uploaded Pages production deployment `7762e5d6` on 2026-11-15. [Stable manifest](https://fleetlab.pages.dev/publication.json) · [Immutable manifest](https://7762e5d6.fleetlab.pages.dev/publication.json) |
-| Rollback | Previous whole-site deployment `febca83c`, source `43d415379d611600731ef9d5ae60c93fc4ac3f75`. Rollback is owner-operated and unrehearsed. |
-| `main` | [PR #36](https://github.com/bohueilin/Hermes/pull/36) merged at `bffa07297d305d41738e40847b2201abf7c9f44e` on 2026-11-15. The PR and merge commit passed CI. |
-| Release branch | `codex/fleetlab-uc03-20261115`, product commit `3bdb504`, local verification record `f3c0187d9048e9e61015aa5801ae7b5204a0f7ce`. |
-| Public release record | [docs/releases/fleetlab-current.json](docs/releases/fleetlab-current.json) binds the receipts for `3bdb504`. |
-| Live verification | Each production host matched 10,186/10,186 served files, 100/100 header checks and 128/128 smoke paths. The offline edition is 2,588,822 B, SHA-256 `7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1`. All 16 production footer checks showed “Date: Nov 15th, 2026”. |
-| Daily readback | On 2026-11-15 the 09:00 local `fleetlab-daily-readback` task was updated to expect `3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8` on the stable site, using the full stage record (SHA-256 `1a3bb091252314aa05ecf831ba82f8c77415e588696bddd799eb15518c2476b3`). A manual run of the configured check finished at 22:59:17 UTC. All 10,186 served paths matched their expected HTTP status, length and SHA-256 on the first run (exit 0). Result SHA-256 `4d066b38aee07a94416827bd5835b5ffc51d573c121085045ded2d9745b5ba28`. |
+| Live site | The owner released source `3343775e62d45bd5aa0554a3036e1439412e0b65` to Pages production `9616e773` on November 16. [Stable manifest](https://fleetlab.pages.dev/publication.json) · [Immutable manifest](https://9616e773.fleetlab.pages.dev/publication.json) |
+| Rollback | Previous whole-site deployment `7762e5d6`, source `3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8`. The owner operates rollback. It remains unrehearsed. |
+| `main` | [PR #39](https://github.com/bohueilin/Hermes/pull/39) merged at `2621a3d8fb450d1c728ff93dc38837104fa584aa` with the tested product tree. Both PR checks and both merge CI jobs passed, the latter on [attempt two](https://github.com/bohueilin/Hermes/actions/runs/44027668083/attempts/2). |
+| Release branch | `feat/fleetlab-audit-batch-20261116`, functional commit `41878d69e454509daf432c5aca323098d98d17de`, released product `3343775e62d45bd5aa0554a3036e1439412e0b65`. |
+| Public release record | The [compact record](docs/releases/fleetlab-current.json) prepared for this release binds the production receipt for `3343775`. At product merge `2621a3d`, the published record still targets `3bdb504`. |
+| Live verification | Both hosts matched 10,186/10,186 served files, 100/100 header checks and 128/128 smoke paths each. All 132 production browser cells showed the November 16 footer. The offline edition is 2,589,391 B, SHA-256 `29884bcf37d2bf625e481d1cabc1471590f1130eef7b2980f40107fb680e873d`. |
+| Daily readback | At production verification, the 09:00 local `fleetlab-daily-readback` task still expects previous source `3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8`. Its last recorded manual check for that source matched 10,186/10,186. The independent November 17 production checks below exercised `3343775`. A scheduled-target update and its own verification remain outstanding. |
 
 ### 2. What the site is
 
 - **The studio** (`/#/…`): Home, Fleet day (the operations lab), Street lab, Explore (the catalog of lessons), About & limits, Depot flow, the Scale lab and the walkthrough. All routes live in one document; the inactive ones are `hidden`.
 - **Network Flows** (`/network-flows/`): a hub and five lessons, Capacity, Software delivery, Delivery order, Rebalancing and Dispatch. Each is a static page whose lab is mounted by JavaScript.
-- **Depot Readiness** (`/depot-readiness/`): the depot lab. Its own text is pinned at 418,159 B of route-local bytes.
+- **Depot Readiness** (`/depot-readiness/`): the depot lab. Its own text is pinned at 418,185 B of route-local bytes.
 - **City Explorer** (`/city-explorer/`): an atlas served from a pinned City base generation.
 - **The offline edition** (`downloads/fleetlab-offline.html`): the studio as a single file, pinned by size and SHA-256.
 
@@ -40,6 +40,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
 | 11-11 | `00d834f` | The fixes wave: the standing website date rule and "Date: Nov 11th, 2026", repeated Limits in Fleet day, the hero shimmer retired, defect (c) D6, and three accessibility fixes. Details in §6 and the November 11 section |
 | 11-11 (evening) | `43d4153` | The numbers and WebKit wave: every count names its population (F01 to F04) and Street lab's comparison adds up, WebKit stops fetching hidden routes' images, an accessibility batch, a source offer that no longer varies with the commit, and the City Python suite in CI (PR #31). Details in §6 and the November 11 (evening) section |
 | 11-15 | `3bdb504` | UC-03 explains all 43 executions and identifies the 20 paired seeds used for the verdict and interval. The website footer carries the November 15 release date. |
+| 11-16 | `3343775` | Twelve approved teaching, readout and navigation changes across the studio, Network Flows, Depot Readiness and City Explorer. All 132 production footer checks showed the November 16 release date. |
 
 **What the performance waves changed** (Chrome 157; 1280×900 and 320×700 with Slow 4G and 4× CPU):
 - **Layout shift at mount:** 0.0000 on every studio route, Readiness and Dispatch, and 0.0001 on Rebalancing (desktop), from up to 1.03. City Explorer is unchanged (0.039 desktop, 0.266 mobile).
@@ -109,7 +110,7 @@ FleetLab is the public teaching website https://fleetlab.pages.dev about the ope
    - The commands are untagged blocks, one per block, with no `#` comments, and the expected output goes in prose. The window must first `cd` into the release worktree: from any other folder the wrapper is not found.
    - Before the exports, `print -r -- ${+CLOUDFLARE_API_TOKEN} ${+CLOUDFLARE_ACCOUNT_ID}` must print `0 0`. A `1` means an export left over in that Terminal tab, which `/bin/zsh -f` inherits: `unset` it in the clean shell (or use a new window) and export the value fresh. This happened once on 2026-11-11 and was cleared before the upload.
    - The agent then runs the full readback and the header check on both hosts, writes the receipt and the compact public record with `record-release.mjs`, and updates this file.
-   - Finally, `main` is reconciled through a pull request. The November 2 section gives the full path; the November 10 section shows the latest run.
+   - Finally, `main` is reconciled through a pull request. The November 2 section gives the full path; the November 16 section records the latest release.
 
 ### 6. Open before new design work (refreshed 2026-11-11)
 
@@ -167,8 +168,8 @@ The 2026-11-10 fixes wave (branch `claude/fleetlab-fixes-20261110`, live since 2
 
 ### 7. Before you start new design or implementation work
 
-1. Read this block, then the November 15 release section, the two November 11 sections, the November 10 and the November 8 sections (the design state, the tokens, how a design review runs and what a proposal costs), then the October 26 rules.
-2. Confirm the live commit: `https://fleetlab.pages.dev/publication.json`. If it is not `3bdb504`, a newer release has happened and this block is out of date.
+1. Read this block, then the November 16 release section, the November 15 UC-03 history, the two November 11 sections, the November 10 and the November 8 sections (the design state, the tokens, how a design review runs and what a proposal costs), then the October 26 rules.
+2. Confirm the live commit: `https://fleetlab.pages.dev/publication.json`. If it is not `3343775e62d45bd5aa0554a3036e1439412e0b65`, a newer release has happened and this block is out of date.
 3. Write the proposal with its cost class and the bytes it will move. The owner approves it item by item before anything is built.
 4. Build on a new branch from `main` and run the gates. For hosted bytes, also build the stage and run the stage check. Then ask the owner for the push, the pull request and the merge, each naming the branch and commit.
 5. After any release, update this block's §1 and §3, add a dated release section below it, and keep the older sections as records.
@@ -190,6 +191,43 @@ You are continuing FleetLab, the public teaching website https://fleetlab.pages.
 
 The owner's task follows.
 ```
+
+## November 16, 2026 — FleetLab teaching batch, production `9616e773`
+
+### Start here
+
+FleetLab serves `3343775e62d45bd5aa0554a3036e1439412e0b65`. The owner accepted the phone preview at `008803e4` and authorized production publication. The product commit and merge commit share tree `c85171d3769fecead2ce235b62f746661c59a105`. Two checks passed on the pull request. On the first merge run, a fixed 30 ms wait observed zero of two City map paths. Both merge CI jobs passed on the recorded rerun. [PR #39](https://github.com/bohueilin/Hermes/pull/39) · [Merge CI](https://github.com/bohueilin/Hermes/actions/runs/44027668083/attempts/2)
+
+| Surface | Changes shipped |
+|---|---|
+| Studio and offline | Completed regional replays fit the lesson layout, subject to the accepted WebKit width below. Fleet day explains how rounding five rows to 0.1 h can produce a 191.9/192.0 h sum and how the depot serializes stages. Street lab pairs the wait comparison with boarded riders and names the fixed dispatcher. Three further readouts identify the population behind wait. |
+| Home, Network Flows and Depot Readiness | Home distinguishes interactive simulations from recorded studies. Rebalancing identifies the hindsight oracle and its gap against Reactive. Capacity identifies the relieved and next binding constraints, and keyboard chapter navigation places focus on visible content. Readiness identifies the bundled DC-port and waiting-position intervention and labels lateness floors for unfinished due work. |
+| City Explorer | The hosted presentation explains the frozen SF v1 replay alongside later atlas versions. The 12-pair result is +1.11 percentage points (95% interval +0.70 to +1.55), below the predeclared 2.0-point practical margin. Recommendation remains withheld (HOLD). The study and City base were preserved. |
+| Coverage | The audit found the catalog deep links and sibling paired-experiment counters already satisfied E-02 and E-05. This release implemented the other twelve approved items and applied the November 16 website date. |
+
+### Stage measurements and local gates
+
+| Measurement at the released product | Exact result |
+|---|---|
+| Whole stage | 10,187 files including `_headers`, 1,629,840,957 B. Full stage record SHA-256 `bde0c65678cdac34aa543075d196fec296b3d128c61438382c9de0470be3d218`. |
+| Offline | 2,589,391 B, leaving 32,049 B below the 2.5 MiB cap. SHA-256 `29884bcf37d2bf625e481d1cabc1471590f1130eef7b2980f40107fb680e873d`. |
+| Hosted bytes | Non-City stage 16,464,086 B, legacy-owned hosted text 2,628,990 B, final emitted text 3,654,018 B, final integration text 184,527 B. Integration manifest SHA-256 `00aa881de70a0f3811631700934e0de949eeed3ae2e354bc37e537dff7288d34`. |
+| Teaching source offer | 1,174,902 B compressed and 4,166,566 B extracted. Compressed SHA-256 `48a315336d4d2fd8793173c9dc899638952cafcde192527a2892405073a23c70`. |
+| Final route closures | NF03 597,327 B, NF04 277,254 B, Delivery order 282,378 B, R1 254,309 B, R3 209,190 B, Depot 569,086 B. Depot route-local 418,185 B. |
+| Local gates | Ruff passed. Hermes doctor reported 18 passes and one optional dependency unavailable. Root pytest passed 1,675, with 55 MetaDrive tests deselected. City Python passed 375. Node passed 14/14 traffic, 353/353 City and 2,990 Playground (eight skipped and one TODO). With performance enabled, Playground passed 3,308 (zero skipped and one TODO). After-mode stage check passed 20/20. |
+
+### Production verification
+
+| Check | Stable and immutable results |
+|---|---|
+| Full byte and status readback | Both production hosts matched all 10,186 served files by HTTP status, length and SHA-256. On November 17 UTC the final immutable pass finished at 08:10:44 and the stable pass at 08:22:55. The final stable pass used six workers and zero retries. Both manifests matched the stage before and after. [Stable manifest](https://fleetlab.pages.dev/publication.json) · [Immutable manifest](https://9616e773.fleetlab.pages.dev/publication.json) |
+| Transport observations | The first pass on each host matched 10,184/10,186 files. Two rollback road maps returned truncated HTTP 200 bodies. All four individual downloads then matched the stage. The next stable pass matched 10,180/10,186 files. Six current-City run-1001 requests (EV-016–019) returned no HTTP response. Both maps matched in that pass. The final passes matched every file. |
+| Additional HTTP checks | Each host passed 100/100 header expectations and 128/128 smoke paths. The stage selects City generation `c4960112802f623c` and retains compatible City fallback `d71826cf1aa949ea`. The whole-site rollback target is deployment `7762e5d6`. |
+| Browser coverage | Eleven hosted interactions × two viewports (1280×900 and 320×800) × Chrome 157, Firefox 155 and WebKit 26.6. Raw public routes passed 63/66 on stable and 61/66 on immutable. With direct City navigation and the targeted Walkthrough controls, each host passed 65/66 strict geometry and interaction assertions. The remaining WebKit L1 cell measured 321 px at a 320 px viewport, consistent with the accepted baseline on all three completed regional replays. All 132 footer cells showed “Date: Nov 16th, 2026” and the corresponding machine date. |
+| Browser controls | Both hosts passed each direct City control (12/12 combined). The immutable WebKit desktop Walkthrough passed two unchanged repeats, and the six originally cancelled modules matched their staged bytes. No first-party HTTP 4xx or 5xx appeared in the raw browser runs. |
+| Keyboard and offline | Capacity keyboard activation and immediate/settled focus geometry passed 48/48 across both hosts. macOS WebKit used Option+Tab for chapter navigation. Separate disk UC-03 runs passed 12/12 across browsers with zero HTTP(S) requests. Phone acceptance was on the preview. |
+| Paired experiment and atlas | All 16 hosted UC-03 browser cells captured all 44 states from zero to 43 executions, with the verdict and interval computed from 20 paired seeds. SF v1/v2/v3 Atlas controls rendered at both tested widths on both hosts. |
+| Receipts | Receipt-writer tests passed 2/2. Full production receipt SHA-256 `29b08c03ce65e3f5cb3ec237a1645cc06d83bbd6effe545248b7747e47715772`. The 128-path compact public record has SHA-256 `7ebf9bd100626b560245f0ff1f0c3916dd4b91e51d235b886f1cbb0b5df363bf`. |
 
 ## November 15, 2026 — UC-03 paired-run counter and footer, production `7762e5d6`
 
@@ -2014,7 +2052,9 @@ must not: the number as a default edit (§10 rule 3).
 
 ### 7.5 FleetLab Playground (teaching model, not evidence)
 
-**Performance release, 2026-11-10 (current, published):** source `0b0fb05`, production `d477d470`, merged into `main`. It removes the mount layout shift on the studio routes and static pages, keeps hidden routes from fetching their images, slices the Street lab run, and stops the methodology explainer while off screen. See the November 10 section.
+**Current teaching release, 2026-11-16.** Production deployment `9616e773` serves source `3343775`. See the November 16 release section above for the studio, Network Flows, Depot Readiness and City Explorer changes.
+
+**Performance release, 2026-11-10 (historical):** source `0b0fb05`, production `d477d470`, merged into `main`. It removes the mount layout shift on the studio routes and static pages, keeps hidden routes from fetching their images, slices the Street lab run, and stops the methodology explainer while off screen. See the November 10 section.
 
 **Design-review release, 2026-11-08 (historical, superseded 2026-11-10 by `d477d470`):** source `5a4dafb`, production `9de52270`. It follows five releases, all built on `codex/fleetlab-ux-impl-20261104` and not yet on `main`: `4b039be` (`1dfb0f22`, 2026-11-08), `e3a5f0c` (`ba603536`), `ceb3d25` (`36954b5c`), `57dd67e` (`e5424a33`) and `de80555` (`79489c69`, 2026-11-04). See the November 8 section.
 
