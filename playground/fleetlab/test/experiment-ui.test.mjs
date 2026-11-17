@@ -1552,3 +1552,24 @@ describe("Experiment flow across modes, presets and seed sets (review: experimen
     });
   });
 });
+
+test("valid paired verdicts keep one rider and bay population note beside the results after a rerender",async()=>{
+  for(const preset of ["UC-03","OPS-03"]){
+    await withDom({}, async()=>{
+      const {container,store}=await finishedRun(preset);
+      const population="Rider waits measure request to pickup for completed rides. Bay waits measure intake end to first task start for visits that started a task, including zero waits.";
+      for(let render=0;render<2;render++){
+        const card=container.querySelector('article[data-validity="VALID"]');
+        const notes=card.querySelectorAll("p").filter(node=>node.textContent===population);
+        assert.equal(notes.length,1);
+        assert.equal(notes[0].closest("details"),null);
+        assert.equal(notes[0].closest('[role="status"]'),null);
+        const exact=card.querySelector("details.teaching-exact");
+        exact.open=true;
+        const record=JSON.parse(exact.querySelector("pre").textContent);
+        assert.equal(record.primary.metric,preset==="UC-03"?"wait.p90_s":"unserved.fraction{area=SF,window=57600-68400}");
+        if(render===0)store.dispatch({type:"experiment/watchMedian"});
+      }
+    });
+  }
+});

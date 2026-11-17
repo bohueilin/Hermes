@@ -165,8 +165,8 @@ test('a verified pair: staged progress, tiles with censoring, the full component
   const tile=id=>x.by('outcome').querySelector(`article[data-term="${id}"]`).querySelectorAll('p[data-arm]').map(p=>overview(p).trim());
   assert.deepEqual(tile('release.on_time_count'),['Baseline: 20 of 24 due by end 1 visit due and not released','Candidate: 21 of 24 due by end 0 visits due and not released']);
   // One baseline visit is unreleased, so its late time is a lower bound; under a minute it keeps exact seconds.
-  assert.deepEqual(tile('visit.overdue_s'),['Baseline: at least 6 s (more may follow)','Candidate: 0 min']);
-  assert.deepEqual(tile('visit.turnaround_observed_s'),['Baseline: at least 111 h 6 min (more may follow)','Candidate: 111 h 23 min']);
+  assert.deepEqual(tile('visit.overdue_s'),['Baseline: at least 6 s (lower bound, work unfinished)','Candidate: 0 min']);
+  assert.deepEqual(tile('visit.turnaround_observed_s'),['Baseline: at least 111 h 6 min (lower bound, work unfinished)','Candidate: 111 h 23 min']);
   assert.deepEqual(tile('release.unreleased_count'),['Baseline: 1 visit','Candidate: 0 visits']);
   const body=vectorRows(x);
   assert.deepEqual(body.map(r=>r.getAttribute('data-component')),st.result.comparison.components.map(c=>c.id));
@@ -577,7 +577,7 @@ test('with the independent verifier: P keeps one unfinished visit per arm, so la
  try{
   const st=runPreset(x,'P'),m=a=>st.result.envelopes[a].projection.metrics;
   const tile=x.by('outcome').querySelector('article[data-term="visit.overdue_s"]').querySelectorAll('p[data-arm]').map(p=>overview(p).trim());
-  assert.deepEqual(tile,['baseline','candidate'].map(a=>`${a[0].toUpperCase()+a.slice(1)}: at least ${minutesText(m(a)['visit.overdue_s'])} (more may follow)`));
+  assert.deepEqual(tile,['baseline','candidate'].map(a=>`${a[0].toUpperCase()+a.slice(1)}: at least ${minutesText(m(a)['visit.overdue_s'])} (lower bound, work unfinished)`));
   const late=vectorRows(x).find(r=>r.getAttribute('data-component')==='overdue_seconds');
   assert.deepEqual(cells(late).slice(2,4),['baseline','candidate'].map(a=>`at least ${secondsText(m(a)['visit.overdue_s'])}`));
   const prim=caption(x,'Unfinished visits at end of run, by primary state'),due=caption(x,'Unfinished visits at end of run, by due status');
@@ -620,5 +620,22 @@ test('with the independent verifier: M is worse, with active-at-end rows; G is m
   assert.doesNotMatch(text,/\bwins?\b|\bbest\b|\boptimal\b|\bwinner\b(?! is named)/i);
   const t=serialize(x.by('outcome'));x.by('tab-technical').click();assert.equal(serialize(x.by('outcome')),t);assert.match(overview(x.by('outcome')),/No winner is named, because the measures disagree\./);
   assert.equal(x.workers.length,2);
+ }finally{x.close();}
+});
+
+test('the observed horizon stays a lower bound when unreleased visits are not yet due',()=>{
+ const x=setup(real.verifyDepotRun);
+ try{
+  change(x.by('preset'),'P');
+  x.s.edit(s=>{for(const visit of s.visits)visit.due_tick=s.horizon_tick+1;},{scope:'both'});
+  x.by('run-pair').click();x.finish();
+  const st=x.s.get();assert.equal(st.status,'verified',x.by('status').textContent);
+  const turnaround=x.by('outcome').querySelector('article[data-term="visit.turnaround_observed_s"]');
+  for(const arm of ['baseline','candidate']){
+   const m=st.result.envelopes[arm].projection.metrics;
+   assert.equal(m['release.due_count'],0);assert.equal(m['release.unfinished_due_count'],0);
+   assert.ok(m['release.unreleased_count']>0);
+   assert.match(overview(turnaround.querySelector(`[data-arm="${arm}"]`)),/at least .*\(lower bound, work unfinished\)/);
+  }
  }finally{x.close();}
 });

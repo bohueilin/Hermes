@@ -34,3 +34,61 @@ test('Capacity fetches no D-01 decoy, prioritises FL-A4 only in the two-column h
   await page.close();
  }
 });
+
+test('keyboard Watch keeps Guided chapters visible above the fold and respects the motion preference',{skip:chrome.skip,timeout:120000},async t=>{
+ const browser=await launchChrome(chrome.path);t.after(()=>browser.close());
+ const server=await serveSite(hostedSite());t.after(()=>server.close());
+ const focusState=()=> {
+  const group=document.querySelector('.capacity-chapters'),rect=group.getBoundingClientRect();
+  const header=document.querySelector('.studio-header').getBoundingClientRect();
+  const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+  return {focused:document.activeElement===group,name:group.getAttribute('aria-label'),
+   top:rect.top,bottom:rect.bottom,left:rect.left,right:rect.right,width:innerWidth,height:innerHeight,
+   headerBottom:header.bottom,hit:hit!==null&&group.contains(hit)};
+ };
+ const key=async(page,name,keyCode)=>{
+  const event={key:name,code:name,windowsVirtualKeyCode:keyCode};
+  await page.send('Input.dispatchKeyEvent',{type:'keyDown',...event,...(name==='Enter'?{text:'\r'}:{})});
+  await page.send('Input.dispatchKeyEvent',{type:'keyUp',...event});
+ };
+ for(const [width,height] of [[320,800],[390,800],[768,800],[1280,900]]){
+  for(const motion of ['reduce','no-preference']){
+   const cell=`${width}x${height} ${motion}`,page=await browser.newPage();
+   try{
+    await page.emulate({width,height,mobile:width<500});
+    await page.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:motion}]});
+    await page.navigate(server.origin+'/network-flows/capacity/');
+    await page.evaluate(`(async()=>{
+     await document.fonts.ready;
+     const watch=document.querySelector('[data-capacity-load]');
+     watch.addEventListener('click',()=>{window.watchActivation=(${focusState})();},{once:true});
+     watch.focus();
+    })()`);
+    await key(page,'Enter',13);
+    const atActivation=await page.evaluate('window.watchActivation');
+    assert.ok(atActivation,`${cell}: Enter must activate Watch comparison`);
+    const loaded=await page.evaluate(`new Promise((resolve,reject)=>{
+     const deadline=performance.now()+10000;
+     function read(){
+      if(document.querySelector('.capacity-status').textContent.includes('Four cells reconstructed')){
+       requestAnimationFrame(()=>requestAnimationFrame(()=>resolve({focus:(${focusState})(),
+        guide:document.querySelector('.capacity-guide-state').textContent})));
+      }else if(performance.now()>deadline){reject(new Error('Watch did not reconstruct its four cells: '+document.querySelector('.capacity-status').textContent));}
+      else{requestAnimationFrame(read);}
+     }
+     read();
+    })`);
+    for(const [moment,state] of [['activation',atActivation],['acceptance',loaded.focus]]){
+     assert.ok(state?.focused,`${cell} ${moment}: Guided chapters must receive focus`);
+     assert.equal(state.name,'Guided chapters');
+     assert.ok(state.top>=Math.max(0,state.headerBottom)&&state.bottom<=state.height&&state.left>=0&&state.right<=state.width&&state.hit,
+      `${cell} ${moment}: focused group must be fully visible and unobstructed: ${JSON.stringify(state)}`);
+    }
+    if(motion==='reduce')assert.match(loaded.guide,/Static storyboard/,cell);
+    else assert.match(loaded.guide,/^40-second guide/,cell);
+    await key(page,'Tab',9);
+    assert.equal(await page.evaluate("document.activeElement.matches('.capacity-chapters button:enabled')"),true,`${cell}: Tab reaches a chapter`);
+   }finally{await page.close();}
+  }
+ }
+});

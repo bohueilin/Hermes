@@ -1487,7 +1487,7 @@ export function mountExperiment(container, { store, host, copy = null, now = wal
     // The header names the change actually tested, because a preset's title stays on screen over an edited axis.
     const axis = ex.frozen.spec.axis, knob = axis.id.startsWith("policy:") ? parseAxis(axis.id).knob : axis.id.slice("parameter:".length);
     const tested = el("p", { "data-role": "change-tested" }, `Change tested: ${differenceText({ knob, from: axis.baseline, to: axis.candidate })}`);
-    const card = renderVerdictCard(view, { ui, rerender: render, strip, rails, notices: [tested, ...(view.validity === "VALID" ? [pairedRunBasis(view.replications)] : []), ...freezeNotices(state)], actions: verdictActions(state, view) });
+    const card = renderVerdictCard(view, { ui, rerender: render, strip, rails, notices: [tested, ...(view.validity === "VALID" ? [pairedRunBasis(view.replications), el("p", {}, "Rider waits measure request to pickup for completed rides. Bay waits measure intake end to first task start for visits that started a task, including zero waits.")] : []), ...freezeNotices(state)], actions: verdictActions(state, view) });
     if (ex.verdictStale) card.setAttribute("class", "fl-verdict fl-stale");
     return card;
   }

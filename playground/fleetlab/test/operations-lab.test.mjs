@@ -194,3 +194,31 @@ test('every Fleet day count and percentage names its population',async()=>{
     lab.destroy();
   }finally{restore();}
 });
+
+test('the five independently rounded activity rows reconcile for the default and airport situations',async()=>{
+  const restore=installFakeDom();
+  const lab=createOperationsLab({reducedMotion:()=>true});
+  try{
+    for(const [situation,total,shown] of [['balanced',192,191.9],['airport',96,96.1]]){
+      const preset=lab.element.querySelector('[aria-label="Start with a situation"]');
+      preset.value=situation;
+      preset.dispatchEvent(new Event('change'));
+      await lab.run();
+      const ledger=lab.element.querySelectorAll('.ops-ledger').find(section=>section.textContent.includes('Where did the fleet'));
+      const rows=ledger.querySelectorAll('tbody tr');
+      assert.equal(rows.length,5);
+      const hours=rows.map(row=>Number(row.children[1].textContent));
+      assert.equal(Math.round(hours.reduce((sum,h)=>sum+h,0)*10)/10,shown);
+      assert.ok(Math.abs(shown-total)<=0.25);
+      assert.ok(ledger.textContent.includes(total+' vehicle-hours ='));
+      assert.ok(ledger.textContent.includes('Five rows round to 0.1 h each (sum within ±0.25 h)'));
+      assert.ok(ledger.textContent.includes('Depot queues sum waits across serial stages: software when scheduled, then cleaning, charging and upload.'));
+      if(situation==='balanced'){
+        const stages=lab.element.querySelectorAll('.ops-service-breakdown table').find(table=>table.textContent.includes('Queue vehicle-min'));
+        const minutes=stages.querySelectorAll('tbody tr').map(row=>Number(row.children[6].textContent.replaceAll(',','')));
+        assert.deepEqual(minutes,[0,24,1499,0]);
+        assert.equal(hours[3],Math.round(minutes.reduce((sum,m)=>sum+m,0)/60*10)/10);
+      }
+    }
+  }finally{lab.destroy();restore();}
+});

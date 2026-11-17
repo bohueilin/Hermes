@@ -232,3 +232,57 @@ test('mobile arm labels name accepted upload strategies and capacity treatments 
     }
   }
 });
+
+test('the More bandwidth card explains the matched visit traces for all nine selections',()=>{
+ const readings={
+  data_heavy:/A1, A2 and A3 half a minute late.*two-minute local step.*No charging is required/,
+  energy_heavy:/A1 ready at minute 12 in both cases\. Charging sets its release time in both/,
+  mixed:/local step at minute 10\.5 instead of 39\.4\. Charging now sets release at minute 12, two minutes late/,
+ };
+ for(const [regime,reading] of Object.entries(readings)){
+  for(const rule of ['capacity_fifo','capacity_departure_deadline','capacity_shortest_upload']){
+   const cards=view.cardsFor(CAPACITY_STUDY,regime,rule);
+   assert.match(cards.find(c=>c.case==='bandwidth').changed,reading);
+   for(const card of cards.filter(c=>c.case!=='bandwidth'))assert.doesNotMatch(card.changed,reading);
+  }
+  const spans=treatment=>view.allocationSpans(run(regime,treatment,'capacity_equal_uplink').record);
+  const base=spans('base'),faster=spans('more_bandwidth'),a1=base.find(v=>v.vehicle==='A1'),b1=faster.find(v=>v.vehicle==='A1');
+  if(regime==='data_heavy'){
+   for(const id of ['A1','A2','A3']){
+    const a=faster.find(v=>v.vehicle===id);
+    assert.equal(a.ready_s-a.deadline_s,30);
+    assert.equal(a.post.t1-a.post.t0,120);
+    assert.equal(a.post.t1,a.ready_s);
+    assert.equal(a.charge.length,0);
+   }
+  }else if(regime==='energy_heavy'){
+   for(const a of [a1,b1]){
+    assert.equal(a.ready_s,720);
+    assert.equal(a.charge.at(-1).t1,a.ready_s);
+    assert.ok(a.post.t1<a.ready_s);
+   }
+  }else{
+   assert.deepEqual([a1.post.t1,b1.post.t1,b1.charge.at(-1).t1,b1.ready_s,b1.deadline_s],[2364,630,720,720,600]);
+  }
+ }
+});
+
+test('the bandwidth reading is withheld if either trace identity or the selected comparison guard fails',()=>{
+ const regime='mixed',rule='capacity_departure_deadline',ids=Object.fromEntries(view.caseCells(regime,rule).map(c=>[c.case,c.cell_id]));
+ const card=manifest=>view.cardsFor(manifest,regime,rule).find(c=>c.case==='bandwidth');
+ const generic=view.caseCells(regime,rule).find(c=>c.case==='bandwidth').changed;
+ assert.match(card(CAPACITY_STUDY).changed,/Charging now sets release at minute 12/);
+ const edits=[
+  ['base digest',(m,c)=>{c('base').record_digest='0'.repeat(64);}],
+  ['bandwidth digest',(m,c)=>{c('bandwidth').record_digest='0'.repeat(64);}],
+  ['missing selected rule',m=>{m.cells=m.cells.filter(c=>c.cell_id!==ids.rule);}],
+  ['ineligible comparison',(m,c)=>{c('rule').verification.comparison_eligible=false;}],
+  ['missing refinement',m=>{delete m.refinement[ids.power];}],
+  ['disagreeing refinement',m=>{m.refinement[ids.bandwidth].agrees=false;}],
+  ['unfinished observation',(m,c)=>{Object.assign(c('base').metrics,{final_lateness:false,unfinished_due:1});}],
+ ];
+ for(const [name,edit] of edits){
+  const m=structuredClone(CAPACITY_STUDY);edit(m,k=>m.cells.find(c=>c.cell_id===ids[k]));
+  assert.equal(card(m).changed,generic,name);
+ }
+});

@@ -1984,7 +1984,7 @@ return `At ${clock} in this replay, ${plural(waiting, "rider")} are waiting and 
  * next chapter plots that same population.
  */
 export function narrationUnservedHour({ clock, unserved, area, wait }) {
-return `In the hour from ${clock}, ${plural(unserved, "rider")} went unserved; wait p90 in ${area} for rides completed in that hour is ${wait}.`;
+return `In the hour from ${clock}, ${plural(unserved, "rider")} went unserved; wait p90 in ${area} for completed rides requested in that hour is ${wait}.`;
 }
 
 /** Beat 1.3, from the events and the frame (counts integers, clock formatted). */

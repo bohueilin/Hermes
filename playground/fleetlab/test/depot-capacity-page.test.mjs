@@ -122,6 +122,7 @@ test('a changed selection after Load keeps the loaded comparison and says so',as
     assert.equal(text(e.querySelector('.capacity-question')),'Does faster upload change readiness when energy work remains?');
     assert.deepEqual(cards(e).map(c=>c.getAttribute('data-loaded')),['true','true','true','true']);
     assert.match(text(e.querySelector('.capacity-result-setup')),/Previous setup: Data-heavy/);
+    assert.match(text(cards(e)[2]),/A1, A2 and A3 half a minute late/);
     assert.equal(p.getState().comparison,loaded);assert.equal(e.querySelector('.capacity-inspect').hidden,false);
     e.querySelectorAll('.capacity-chips button')[0].click();
     change(e.querySelector('select[aria-label="Different rule"]'),'capacity_fifo');
@@ -180,7 +181,10 @@ test('every control is reachable by keyboard and the copy has no dashes or banne
   const restore=installFakeDom();
   try{const p=create(),e=p.element;await p.load();
     for(const node of e.querySelectorAll('button, select, input, summary, a'))assert.notEqual(node.getAttribute('tabindex'),'-1',node.localName);
-    for(const node of e.querySelectorAll('[tabindex="-1"]'))assert.match(node.localName,/^(h[1-6]|main)$/);
+    const chapters=e.querySelector('[role="group"][aria-label="Guided chapters"]');
+    for(const node of e.querySelectorAll('[tabindex="-1"]')){
+      if(node!==chapters)assert.match(node.localName,/^(h[1-6]|main)$/);
+    }
     for(const details of e.querySelectorAll('details'))assert.ok(details.querySelector('summary'));
     for(const select of e.querySelectorAll('select'))assert.ok(select.getAttribute('aria-label'));
     p.destroy();
@@ -417,4 +421,18 @@ test('route restoration cannot reattach narration to a manually changed vehicle 
   const restore=installFakeDom();try{const p=create(),e=p.element;await p.watch();change(e.querySelector('select[aria-label="Vehicle"]'),'B3');change(e.querySelector('select[aria-label="Case to compare"]'),'power');const caption=e.querySelector('.capacity-guide-caption').textContent;
     window.dispatchEvent(new Event('pagehide'));window.dispatchEvent(new Event('pageshow'));assert.equal(e.querySelector('.capacity-guide-caption').textContent,caption);assert.equal(p.getState().vehicle,'B3');assert.equal(p.getState().contrast,'power');p.destroy();
   }finally{restore();}
+});
+
+test('Watch focuses the named chapter group while the matching records are pending and after acceptance',async()=>{
+ const restore=installFakeDom();let p;
+ try{
+  let resume,paused=true;
+  p=create({yieldPage:()=>{if(!paused)return Promise.resolve();paused=false;return new Promise(r=>{resume=r;});}});
+  const e=p.element,watch=e.querySelector('[data-capacity-load]'),chapters=e.querySelector('[role="group"][aria-label="Guided chapters"]');
+  watch.focus();const pending=p.watch();
+  assert.equal(chapters.getAttribute('tabindex'),'-1');
+  assert.ok(document.activeElement===chapters,'watch immediately focuses its visible chapter controls');
+  resume();await pending;
+  assert.ok(document.activeElement===chapters,'acceptance preserves focus');assert.ok(p.getState().comparison);
+ }finally{p?.destroy();restore();}
 });

@@ -99,7 +99,7 @@ test("real current source proof preserves legacy bytes, counts its metadata and 
   assert.equal(receipt.counts.depot_route_local_bytes, measureSiteOwnership(files).depot_route_local_bytes);
   assert.ok(receipt.counts.depot_closure_bytes <= 786432 && receipt.counts.depot_route_local_bytes <= 524288);
   assert.ok(receipt.counts.package_metadata_bytes <= 57344 && receipt.counts.source_offer_extracted_bytes <= 5242880);
-  assert.ok(receipt.counts.offline_bytes <= 2588822);
+  assert.ok(receipt.counts.offline_bytes <= 2589391);
   assert.equal(receipt.offline.reserved_bytes, APP_MAX_BYTES - readFileSync(offline).length);
   assert.ok(receipt.routes.find(route => route.id === "nf03").bytes <= 557056);
   assert.equal(result.files.size, 2);
@@ -142,8 +142,8 @@ test("the offline edition reproduces the approved catalog look_for bytes exactly
   // Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then Street slicing and world reuse 1,469 B.
   // Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add 406 B.
   const html = buildHtml(source);
-  assert.equal(Buffer.byteLength(html), 2588822);
-  assert.equal(hash(html), "7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1");
+  assert.equal(Buffer.byteLength(html), 2589391);
+  assert.equal(hash(html), "29884bcf37d2bf625e481d1cabc1471590f1130eef7b2980f40107fb680e873d");
 });
 
 test("development measurement rejects altered site, offline bytes, extras and resealed root HTML", () => {

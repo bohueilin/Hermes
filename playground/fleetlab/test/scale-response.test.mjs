@@ -288,3 +288,9 @@ test('M1: the declared change of a directive says what the model does, vehicle r
   const d=LAB.derive({load:1.3,lever:'directive',delay:45});assert.equal(d.ok,true);
   assert.equal(d.setup.main.spec.change,'A directive removes the ask of every vehicle request moved into the event, from 45 min after the event starts.');
 });
+
+test('the ordinary wait and the cross-check name the answered vehicle and responder population',()=>{
+  const result=press();
+  assert.equal(result.tables[1].heads[2],'Mean wait per answered request (vehicles and responders)');
+  assert.match(result.tables[4].caption,/Simulated mean waits count answered vehicle requests and responder calls\./);
+});

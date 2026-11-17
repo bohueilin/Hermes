@@ -11,9 +11,9 @@ import {checkStage,INPUT_DIGESTS,RUNTIME,OFFLINE_BEFORE,OFFLINE_AFTER,BOUNDS,ROU
 // Catalog look_for wave (2026-10-31, owner): emitted_text_bytes 3577477 and the offline AFTER pair re-pinned to the measured stage.
 // Tile swap wave (2026-11-02, owner): non_city_bytes raised by exactly the four new tiles' 140414 B, from 16203828 to 16344242.
 // Perf waves (2026-11-09 and 11-10, owner): every affected ceiling re-pinned to the exact measured stage, no spare bytes.
-const SPEC_BOUNDS={nf03_closure_bytes:595530,nf04_closure_bytes:276671,delivery_order_closure_bytes:281795,r1_closure_bytes:253146,r3_closure_bytes:208607,depot_closure_bytes:568477,
- emitted_text_bytes:3651096,integration_text_bytes:183944,integration_source_bytes:444804,source_offer_extracted_bytes:4163641,source_offer_compressed_bytes:1173750,
- package_metadata_bytes:45385,non_city_bytes:16459443};
+const SPEC_BOUNDS={nf03_closure_bytes:597327,nf04_closure_bytes:277254,delivery_order_closure_bytes:282378,r1_closure_bytes:254309,r3_closure_bytes:209190,depot_closure_bytes:569086,
+ emitted_text_bytes:3654018,integration_text_bytes:184527,integration_source_bytes:445387,source_offer_extracted_bytes:4166566,source_offer_compressed_bytes:1174902,
+ package_metadata_bytes:45385,non_city_bytes:16464086};
 const SPEC_BEFORE={nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
  depot_route_local_bytes:418159,emitted_text_bytes:3569285,integration_text_bytes:129056,hosted_artwork_bytes:7793265,source_offer_extracted_bytes:4079740,non_city_minus_offer_bytes:15039757};
 const DIGEST_PREFIXES={legacy:'15b3d561',city_base:'1d76e6af',city_source_offer:'1bf42853',readback:'708659b4'};
@@ -21,7 +21,7 @@ const OFFLINE_SHA='313fa3f1a94ed0c40b05858c38a1bc9d5d2facc3b1cdff998ec783a6c9f58
 // Wave 3 (2026-11-06, owner W3-D2): exact affected ceilings and recomputed offline pair.
 // Perf waves (2026-11-09 and 11-10, owner): the explainer's viewport gate adds 285 B, then the Street slicing and world reuse 1,469 B, to the offline edition.
 // Fixes wave (2026-11-10, owner): the Fleet day Limits fix and the studio menu's Escape add 406 B.
-const OFFLINE_AFTER_PAIR={bytes:2588822,sha256:'7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1'};
+const OFFLINE_AFTER_PAIR={bytes:2589391,sha256:'29884bcf37d2bf625e481d1cabc1471590f1130eef7b2980f40107fb680e873d'};
 const LEGACY='15b3d5611f733be5bac5fa390caa99a7cc8a64179d0d1ee9c9a7d3f7626b3529';
 
 // A synthetic stage holding the BEFORE values, shaped like the three records build-release.py writes.
@@ -33,6 +33,7 @@ function stage(changes={},offline={bytes:2565111,sha256:OFFLINE_SHA}){
    integrated_text:{nf03_closure_bytes:537633,nf04_closure_bytes:221334,delivery_order_closure_bytes:225063,r1_closure_bytes:196347,r3_closure_bytes:152391,depot_closure_bytes:513471,
     depot_route_local_bytes:418159,emitted_text_bytes:3569285,integration_text_bytes:129056,hosted_artwork_bytes:7793265}},
   receipt:{integration_source:{bytes:389082},counts:{source_offer_extracted_bytes:4079740,source_offer_compressed_bytes:1147688,package_metadata_bytes:44361}}};
+ if(offline===OFFLINE_AFTER_PAIR)s.manifest.integrated_text.depot_route_local_bytes=418185;
  const where=name=>name in s.manifest.integrated_text?[s.manifest.integrated_text,name]:name==='non_city_bytes'?[s.manifest,name]
   :name==='integration_source_bytes'?[s.receipt.integration_source,'bytes']:[s.receipt.counts,name];
  for(const [name,value]of Object.entries(changes)){const [record,key]=where(name);record[key]=value;}
@@ -42,7 +43,7 @@ const failed=(s,mode)=>checkStage(s,mode).checks.filter(c=>!c.ok).map(c=>c.name)
 const AFTER_CHECKS=['legacy_input_sha256','city_base_input_sha256','city_source_offer_input_sha256','readback_input_sha256','runtime','offline_download',...Object.keys(SPEC_BOUNDS),'depot_route_local_bytes'];
 
 test('the runner pins the spec section 3 bounds and the section 4 BEFORE values',()=>{
- assert.deepEqual(BOUNDS,SPEC_BOUNDS);assert.deepEqual(BEFORE,SPEC_BEFORE);assert.deepEqual(ROUTE_LOCAL,{min:418150,max:418159});
+ assert.deepEqual(BOUNDS,SPEC_BOUNDS);assert.deepEqual(BEFORE,SPEC_BEFORE);assert.deepEqual(ROUTE_LOCAL,{min:418176,max:418185});
  assert.deepEqual(OFFLINE_BEFORE,{bytes:2565111,sha256:OFFLINE_SHA});assert.deepEqual(OFFLINE_AFTER,OFFLINE_AFTER_PAIR);assert.deepEqual(RUNTIME,{node:'v22.23.4',python:'3.11.15'});
  assert.equal(SPEC_BEFORE.non_city_minus_offer_bytes,16187445-1147688);
  for(const [name,prefix]of Object.entries(DIGEST_PREFIXES))assert.match(INPUT_DIGESTS[name],new RegExp(`^${prefix}[0-9a-f]{56}$`),name);
@@ -51,7 +52,7 @@ test('the runner pins the spec section 3 bounds and the section 4 BEFORE values'
 test('a BEFORE stage passes before mode and an AFTER stage passes after mode, and before adds the exact pins to the after bounds',()=>{
  const after=checkStage(stage({},OFFLINE_AFTER_PAIR),'after'),before=checkStage(stage(),'before');
  assert.equal(after.ok,true);assert.equal(before.ok,true);
- assert.deepEqual(failed(stage(),'after'),['offline_download']);assert.deepEqual(failed(stage({},OFFLINE_AFTER_PAIR),'before'),['offline_download']);
+ assert.deepEqual(failed(stage({depot_route_local_bytes:418185}),'after'),['offline_download']);assert.deepEqual(failed(stage({depot_route_local_bytes:SPEC_BEFORE.depot_route_local_bytes},OFFLINE_AFTER_PAIR),'before'),['offline_download']);
  assert.deepEqual(after.checks.map(c=>c.name),AFTER_CHECKS);
  assert.deepEqual(before.checks.map(c=>c.name),[...AFTER_CHECKS,...Object.keys(SPEC_BEFORE)]);
  assert.ok(before.checks.every(c=>c.ok&&'actual'in c));
@@ -64,14 +65,14 @@ test('every bound admits its ceiling and rejects one byte more, in both modes',(
   assert.deepEqual(failed(stage({[name]:max+1},OFFLINE_AFTER_PAIR),'after'),[name],name);
   assert.ok(failed(stage({[name]:max+1}),'before').includes(name),name);
  }
- assert.deepEqual(failed(stage({depot_route_local_bytes:418150},OFFLINE_AFTER_PAIR),'after'),[]);
- for(const value of [418149,418160])assert.deepEqual(failed(stage({depot_route_local_bytes:value},OFFLINE_AFTER_PAIR),'after'),['depot_route_local_bytes']);
+ assert.deepEqual(failed(stage({depot_route_local_bytes:418176},OFFLINE_AFTER_PAIR),'after'),[]);
+ for(const value of [418175,418186])assert.deepEqual(failed(stage({depot_route_local_bytes:value},OFFLINE_AFTER_PAIR),'after'),['depot_route_local_bytes']);
 });
 
 test('before mode requires each BEFORE value exactly, while after mode accepts the smaller value',()=>{
  for(const name of Object.keys(SPEC_BEFORE).filter(n=>n!=='non_city_minus_offer_bytes')){
   const before=stage({[name]:SPEC_BEFORE[name]-1}),after=stage({[name]:SPEC_BEFORE[name]-1},OFFLINE_AFTER_PAIR);
-  assert.deepEqual(failed(before,'before'),[name],name);assert.deepEqual(failed(after,'after'),[],name);
+  assert.deepEqual(failed(before,'before'),[name],name);assert.deepEqual(failed(after,'after'),name==='depot_route_local_bytes'?['depot_route_local_bytes']:[],name);
  }
 });
 
@@ -100,7 +101,7 @@ test('missing or malformed evidence fails its checks instead of passing or throw
  assert.deepEqual(failed(stage({package_metadata_bytes:null},OFFLINE_AFTER_PAIR),'after'),['package_metadata_bytes']);
  // A fractional byte count under its ceiling or inside the route-local range is still not a byte count.
  assert.deepEqual(failed(stage({nf03_closure_bytes:537633.5},OFFLINE_AFTER_PAIR),'after'),['nf03_closure_bytes']);
- assert.deepEqual(failed(stage({depot_route_local_bytes:418155.5},OFFLINE_AFTER_PAIR),'after'),['depot_route_local_bytes']);
+ assert.deepEqual(failed(stage({depot_route_local_bytes:418181.5},OFFLINE_AFTER_PAIR),'after'),['depot_route_local_bytes']);
  const empty=checkStage({inputs:null,manifest:{},receipt:undefined},'before');
  assert.equal(empty.ok,false);assert.equal(empty.checks.length,AFTER_CHECKS.length+Object.keys(SPEC_BEFORE).length);assert.ok(empty.checks.every(c=>!c.ok));
 });

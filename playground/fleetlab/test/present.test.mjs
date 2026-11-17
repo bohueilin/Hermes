@@ -13,6 +13,7 @@ import { before, describe, test } from "node:test";
 import { installFakeDom } from "./helpers/fake-dom.mjs";
 import { experimentPayload, frozenExperiment, ops01Payload, presetScenario } from "./helpers/model-payloads.mjs";
 import { CHECK_IDS } from "../src/model/invariants.js";
+import { percentileFleetLab } from "../src/core/stats.js";
 import { computeMetric } from "../src/model/metrics.js";
 import { PRESETS, presetById } from "../src/model/presets.js";
 import { REGISTRY_PREVIEW, registryRows } from "../src/ui/analytics.js";
@@ -1070,4 +1071,31 @@ test('story progress stays disabled before preparation and navigates the same el
   dots.at(-1).click();assert.equal(m.find('present-finale').hidden,false);assert.match(m.find('present-finale').textContent,/What you saw/);
   assert.equal(m.find('present-finale').querySelector('a').getAttribute('href'),'#/catalog');
  }finally{m.cleanup();}
+});
+
+test("the 18:00 beat counts completed rides by request time on the seed-1001 San Francisco replay",async()=>{
+  const ctx = await opened();
+  try {
+    ctx.next().click();
+    assert.equal(ctx.beatKey(), "unservedHour");
+    assert.equal(payload.log.seed, 1001);
+    const state = ctx.store.getState(), area = focusArea(state);
+    const start = Math.floor(state.clock_s / 3600) * 3600 - 3600, end = start + 3600;
+    assert.equal(area, "SF");
+    assert.equal(start, 18 * 3600);
+    const completed = payload.log.requests.filter(r => r.origin === area && r.state === "COMPLETED");
+    const cohort = field => {
+      const waits = completed.filter(r => r[field] >= start && r[field] < end).map(r => r.pickup_s - r.time_s);
+      return [waits.length, Number(percentileFleetLab(waits, 0.9).toFixed(1))];
+    };
+    assert.deepEqual(cohort("time_s"), [30, 4053.5]);
+    assert.deepEqual(cohort("dropoff_s"), [34, 2358.1]);
+    const metric = computeMetric({ ...payload.log, scenario, window: scenario.window },
+      { metric: "wait.p90_s", scope: { area, window: { start_s: start, end_s: end } } });
+    assert.equal(Number(metric.value.toFixed(1)), 4053.5);
+    assert.equal(ctx.figure("waitHour"), "68 min");
+    assert.match(ctx.find("present-narration").textContent, /for completed rides requested in that hour/);
+  } finally {
+    ctx.cleanup();
+  }
 });

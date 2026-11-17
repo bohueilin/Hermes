@@ -90,3 +90,34 @@ test('baseline-only results have a nonempty summary and retain all baseline valu
   assert.match(outcome.querySelector('caption').textContent,/Baseline/);assert.doesNotMatch(outcome.querySelector('caption').textContent,/Changed/);
  }finally{restore();}
 });
+
+test('Readiness bounds the observed mean across visits, floors unfinished fractions and keeps complete means rounded',()=>{
+ const restore=installFakeDom();
+ try{
+  const field=document.createElement('div'),count=document.createElement('span');
+  field.className='field';count.className='technical-only';count.textContent='visits (count): 24';
+  field.appendChild(count);document.body.appendChild(field);
+  const pressure=run('P'),{outcome}=mount(pressure);
+  const means=()=>outcome.querySelectorAll('[data-term="visit.turnaround_observed_s"] .depot-visit-mean').map(n=>n.textContent.trim());
+  decorateDepotPipes(document);decorateDepotPipes(document);
+  for(const [arm,seconds] of [['baseline',608747],['candidate',552976]]){
+   const m=pressure.envelopes[arm].projection.metrics;
+   assert.equal(m['release.unfinished_due_count'],1);assert.equal(m['visit.turnaround_observed_s'],seconds);
+  }
+  assert.deepEqual(means(),[
+   'Across 24 visits: at least 25364.4 s observed per visit (lower bound, work unfinished).',
+   'Across 24 visits: at least 23040.6 s observed per visit (lower bound, work unfinished).',
+  ]);
+  const redisplay=result=>{outcome.replaceChildren(...outcomeNodes(state(result)));decorateDepotPipes(document);};
+  redisplay(paired);
+  assert.deepEqual(means(),[
+   'Across 24 visits: 10216.4 s observed per visit (2 h 50 min).',
+   'Across 24 visits: 6480.3 s observed per visit (1 h 48 min).',
+  ]);
+  const exact=structuredClone(pressure);
+  exact.envelopes.baseline.projection.metrics['visit.turnaround_observed_s']=2400;
+  redisplay(exact);assert.match(means()[0],/at least 100\.0 s observed per visit/);
+  count.textContent='visits (count): 0';
+  redisplay(exact);assert.deepEqual(means(),[]);
+ }finally{restore();}
+});
