@@ -4,7 +4,7 @@
   "sf_qualification": "HOLD",
   "authenticity": "NOT_AUTHENTICATED",
   "operational_deployment_permission": "NONE",
-  "source_commit": "3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8",
+  "source_commit": "3343775e62d45bd5aa0554a3036e1439412e0b65",
   "current": {
     "compatibility": {
       "metrics": "fleetlab.city-metrics/1.0.0",
@@ -12,8 +12,8 @@
       "run": "fleetlab.city-run/1.0.0",
       "viewer": "1.1.0"
     },
-    "path": "city-explorer/releases/494c705e9ae49a3f",
-    "release_sha256": "494c705e9ae49a3fb0e64b83266725e538afe2e7bbc9fb68bffda7a60d8e85bc"
+    "path": "city-explorer/releases/c4960112802f623c",
+    "release_sha256": "c4960112802f623c8530782247a97d530b4ed25975f28e9d99b0de1a2bab31f3"
   },
   "rollback": {
     "compatibility": {
@@ -33,9 +33,9 @@
   "server_side": "none",
   "server_side_scope": "VERIFIED_LOCAL_STAGE_ONLY",
   "publication": "PUBLIC_BYTES_OBSERVED",
-  "integration_manifest_sha256": "577c6e731e80b15e4b3e92261097483da9bf86123953ca9c5310986eab8d65a0",
+  "integration_manifest_sha256": "00aa881de70a0f3811631700934e0de949eeed3ae2e354bc37e537dff7288d34",
   "file_count": 10187,
-  "total_bytes": 1629836314,
+  "total_bytes": 1629840957,
   "files": {
     "404.html": {
       "bytes": 1609,
@@ -51,18 +51,18 @@
       "sha256": "86e5371374dd22d2f094c1d2dc74a395501a56299775453bd77a9ae057fea2a0"
     },
     "brand.mjs": {
-      "bytes": 39947,
-      "sha256": "937cced53d7d7bd8dd62ec2bf77ad5eb597adba8dae1150d5d0f92cc7b12aa13"
+      "bytes": 40530,
+      "sha256": "2377e697687c2d7a95c6ed55f7fa3c62884bf9f6fbf2ea9ede58d443a8ab406a"
     },
-    "city-explorer/releases/494c705e9ae49a3f/data/catalog.json": {
+    "city-explorer/releases/c4960112802f623c/data/catalog.json": {
       "bytes": 341154,
       "sha256": "e3fad7fcab8b04ff34a56fc5ddd90e82abc4e15172bc91595a62c34bcb2bbae1"
     },
-    "city-explorer/releases/494c705e9ae49a3f/data/model-lessons.json": {
+    "city-explorer/releases/c4960112802f623c/data/model-lessons.json": {
       "bytes": 31982,
       "sha256": "1552e6f4099a3f459f7d1671b280b98d8c1bff0ad997a87fad40134e5f77171b"
     },
-    "city-explorer/releases/494c705e9ae49a3f/index.html": {
+    "city-explorer/releases/c4960112802f623c/index.html": {
       "bytes": 36082,
       "sha256": "f7bba516b67ec165a23f451b7f71f68c8c4f213c6704870f19d9ceac0462b749"
     },
@@ -84,7 +84,7 @@
     },
     "depot-readiness/release.json": {
       "bytes": 15830,
-      "sha256": "53be65d7cb8ac3bbd5c00d8155cf2cc16773f2b73049dd12a72114fd5f6e67ed"
+      "sha256": "83e7653937bfc637e380a1f9b67d57de58b7a541e163713ed4f1c3c3edc22100"
     },
     "depot-readiness/visual.css": {
       "bytes": 8172,
@@ -107,12 +107,12 @@
       "sha256": "353762295346a650a868f43580b379cdfd825676eec57c1b7fc4d4eec2444f8f"
     },
     "downloads/fleetlab-offline.html": {
-      "bytes": 2588822,
-      "sha256": "7862702e496072adfa268253683b6e1b98887bad64bbca6b6968d46d229c8fc1"
+      "bytes": 2589391,
+      "sha256": "29884bcf37d2bf625e481d1cabc1471590f1130eef7b2980f40107fb680e873d"
     },
     "downloads/teaching-package.json": {
       "bytes": 44355,
-      "sha256": "c2ec59159135771f020ff9fa00b7b7b835ab1b989840087befea52c5edda5e4d"
+      "sha256": "7ceff55ee07769c4ad98d7f232fb6f92b8ae098eee2497ba716f26499aa45f06"
     },
     "enhancement-media.css": {
       "bytes": 3057,
@@ -160,7 +160,7 @@
     },
     "integration.mjs": {
       "bytes": 11177,
-      "sha256": "3c87345a4a379ddf44a41e297e5eab60314541286f118e99294a0c4c76a57e35"
+      "sha256": "d180047b3af8569855035af9656a8ca529ab3f0d12be862800b4f7dacfcdddc4"
     },
     "network-flows/capacity/index.html": {
       "bytes": 2160,
@@ -168,7 +168,7 @@
     },
     "network-flows/capacity/release.json": {
       "bytes": 16589,
-      "sha256": "8b338ec7edef15ada64cff414ca57cfb4c86f1ad29efbec54ca21e3a0c941d77"
+      "sha256": "a976e18dbf0387afd3ad7ad98db4174107ae8b03b659c3a80f6c3ed1515bd870"
     },
     "network-flows/capacity/visual.css": {
       "bytes": 14892,
@@ -184,7 +184,7 @@
     },
     "network-flows/delivery-order/release.json": {
       "bytes": 8099,
-      "sha256": "1a4c7b77ef3b80d022369d0237f1fea9b8fda3ff6fc2c42c3709abcca07488ac"
+      "sha256": "d6a4a3d6ae10dd337b4e3b700623a5b43023c802555c0b4bdee4ed282c7c2e66"
     },
     "network-flows/delivery-order/visual.css": {
       "bytes": 12933,
@@ -200,7 +200,7 @@
     },
     "network-flows/dispatch/release.json": {
       "bytes": 12657,
-      "sha256": "bf056de12310b4a4bf3d1c2f84bf4462d904c8159a7464718bcf8b3450a53443"
+      "sha256": "f9fa96961e16b8e8541a3579275d8aaa2478b39bcb774d076cab206fca1ff3b6"
     },
     "network-flows/dispatch/visual.css": {
       "bytes": 5396,
@@ -227,12 +227,12 @@
       "sha256": "6fc7dd0c0ae7833010b700c96a37a2b303a8e9de2a6f6b226da7a6c869c37742"
     },
     "network-flows/rebalancing/index.html": {
-      "bytes": 13848,
-      "sha256": "5efddf660e697b68acdfc321c931560a99646fc6cee4c88365e38aefe59de73f"
+      "bytes": 13868,
+      "sha256": "90824910c80d76f3adf4e537b13cd8e2bc51a2a078e5988c849b4c3abc20b1d6"
     },
     "network-flows/rebalancing/release.json": {
-      "bytes": 17929,
-      "sha256": "e721b601320da95e99da11ec819ee8bb6181442bada2ef46d2eb7b9dcc3f1b44"
+      "bytes": 17949,
+      "sha256": "1160112c02a81690e41886c119657b6172981d2c5e3e5ca0fc9a2c990e21c993"
     },
     "network-flows/rebalancing/visual.css": {
       "bytes": 16273,
@@ -248,19 +248,19 @@
     },
     "network-flows/software-delivery/release.json": {
       "bytes": 6857,
-      "sha256": "0c590f6dbb6de7707a83cdc41c4d8b8e52520d9e25363f9d9189d9a6253b4b88"
+      "sha256": "e28bcc5de836f9da1c2af244958349436234fea0fba28b2e533d8efed1bbfb3d"
     },
     "network-flows/software-delivery/visual.css": {
       "bytes": 18435,
       "sha256": "d72419d7b7b9660a778ca853905b69b76d63c38490101a3be16bb4075aad4d13"
     },
-    "network-flows/sources/0d7658ba6d508baa681aa99b812d981e5e2aecb00a7dcf2c352ae8ff2dae5aa0.json.gz": {
-      "bytes": 1173750,
-      "sha256": "0d7658ba6d508baa681aa99b812d981e5e2aecb00a7dcf2c352ae8ff2dae5aa0"
+    "network-flows/sources/48a315336d4d2fd8793173c9dc899638952cafcde192527a2892405073a23c70.json.gz": {
+      "bytes": 1174902,
+      "sha256": "48a315336d4d2fd8793173c9dc899638952cafcde192527a2892405073a23c70"
     },
     "publication.json": {
       "bytes": 1800,
-      "sha256": "7d8939e1e8dc96538fc999bd6e8fda9f6cdb6960df9164810fee1fbfc067b29e"
+      "sha256": "8a0b40359d7c65dad2194c3fd116fd3eebbd646c2aa86433e6542f7e09ee5361"
     },
     "site-media/apple-touch-icon.png": {
       "bytes": 21051,
@@ -447,8 +447,8 @@
       "sha256": "c86fd6c021c5f829cc1e42f89433e69634f8f2992848567898aaf37a25f0c6c8"
     },
     "src/ui/rebalancing-view.js": {
-      "bytes": 8004,
-      "sha256": "39b1a965e353f087ab96c93faccbe43d03c9b107679bbfdc1cf422af976a96c6"
+      "bytes": 8544,
+      "sha256": "f550d84120df6c1de6d5125d7b15ba9a4626bb6dfd4324e913245d91c79b16b1"
     },
     "src/ui/simulation-catalog.js": {
       "bytes": 13817,
@@ -459,8 +459,8 @@
       "sha256": "9de0c013e186e6fb612a1e1225d850c08f1f757e7325328ae3bd5c2e957e8a3a"
     },
     "styles.css": {
-      "bytes": 113491,
-      "sha256": "352574614f19689680bb8466d4f3af56362a82bdb2da4631a917627ba1120d17"
+      "bytes": 113531,
+      "sha256": "75a9347c4727a68c357ee530b8e46c161e79fe248e0863f1414164f9b3c60361"
     },
     "tiles/T-01-fleet-day.webp": {
       "bytes": 81846,
@@ -548,81 +548,81 @@
     },
     "visitor.mjs": {
       "bytes": 32317,
-      "sha256": "f40d2dd830cdfbbfbb29633aa25d96a141cf4a282646971aef03de3dcb380232"
+      "sha256": "0d40038957202cd9fcd29f5c67da71ac4896d855fc98d7ee3a6766b3bb674d95"
     }
   },
-  "verified_at_utc": "2026-11-15T19:42:51.316Z",
+  "verified_at_utc": "2026-11-17T08:28:27.524Z",
   "verification": {
     "served_files": 10186,
     "matched_files": 10186,
     "header_checks": 100,
     "headers_pass": true,
-    "captured_at_utc": "2026-11-15T19:42:08.216734+00:00",
-    "headers_captured_at_utc": "2026-11-15T19:38:47.614562+00:00",
-    "full_readback_sha256": "5c4a3f4ce82fff15ca7f70402b18a155867e699d9980fe28e7c15ac0ab141834",
-    "production_headers_sha256": "006a25221c42544afa773ed7188f8913ee487f1e2eb81bf607003bb82cc3655d",
-    "stable_smoke_sha256": "eeb3d591be686e676bd32dc17864de7f49376e70c2fba3cfc7135495a2451755",
-    "immutable_smoke_sha256": "2945c546d0d00b890959aa3023a67b0928f9eb32cb2178f1281fbccaafece8a4",
+    "captured_at_utc": "2026-11-17T08:22:55.835044+00:00",
+    "headers_captured_at_utc": "2026-11-17T07:54:36.296893+00:00",
+    "full_readback_sha256": "1e2f0c565a60aadbad8a27200571d3ccf633f9554dbb06b0c51ddf114e10d473",
+    "production_headers_sha256": "208d664f1f3068db87f1a2caf72b1628c866957530664993bed05ab415b7bf70",
+    "stable_smoke_sha256": "db10dbd295e6078a3903077f4038dddba9b33bfc3f0666921397dba2a3d73268",
+    "immutable_smoke_sha256": "c542c53c5f9cf9e9cd6c53050526bb96a08e22f4efcc2139a2f3d5998a5d3066",
     "immutable_matched_files": 10186,
     "immutable_total_files": 10186,
-    "immutable_captured_at_utc": "2026-11-15T19:42:07.845273+00:00",
-    "immutable_full_readback_sha256": "23a435148cef10f06a28f3489c0d77c441779cb60912dae3458b79c282d9d013",
+    "immutable_captured_at_utc": "2026-11-17T08:10:44.878742+00:00",
+    "immutable_full_readback_sha256": "b695535bcb20bd293f203b3fcf46673e480b2a6cb173cd5e4623eeaaf0f4c59c",
     "immutable_header_checks": 100,
     "immutable_headers_matched": 100,
-    "immutable_headers_sha256": "d6a9c5611c92e9de2dda8df397bea966eabaf137f6db67d84519b55218957a10",
+    "immutable_headers_sha256": "cd970abadc0b6d48b47c938478fa199220f64c22822a73205f93e0382712901d",
     "immutable_scope": "FULL_BYTE_READBACK_AND_FULL_HEADER_CHECK of the immutable production host.",
-    "full_generated_receipt_sha256": "ec66a270036e3c6a0c0f0c6810107299c389d646c62cf4d8f2014af565e2dd05",
-    "preview_full_readback_sha256": "66a843019669edf394735e3d477d82047f755da819e102fe1d2c46a02b2bb8d5",
-    "preview_headers_sha256": "bfbac9b9f6e4c2ad10e5e3320edd3dcf28ea7b5f44559d0c6b385f7e43e796e7",
+    "full_generated_receipt_sha256": "29b08c03ce65e3f5cb3ec237a1645cc06d83bbd6effe545248b7747e47715772",
+    "preview_full_readback_sha256": "7569c40169c4b1f7768c2a53e92777e4dd16953ed619ddfba8c5a43f51d0e3d3",
+    "preview_headers_sha256": "eee92598d2114f1940df6ba6bf3869e3d8582655aa70099575a8504add92609b",
     "production_browser_check": {
-      "scope": "UC-03 in Chrome, Firefox and WebKit on both production hosts. Home, City atlas and replay after snapshot load, Depot Readiness and Rebalancing in Chrome at 320 and 1280 px.",
-      "result": "All 16 UC-03 runs showed 0 through 43 executions, HOLD on 20 paired seeds and median replay seed 1015. The four routes checked displayed the November 15 footer on both hosts.",
+      "scope": "Eleven hosted surfaces in three browser engines at 320 and 1280 pixels on each production host. Additional UC-03, Atlas, keyboard focus and offline file exercises.",
+      "result": "Strict routes passed 63/66 on stable and 61/66 on immutable. With documented controls each passed 65/66, plus one owner-accepted baseline WebKit width excursion. All 132 footer checks showed November 16. Six offline runs on each host made no HTTP requests. Sixteen UC-03 runs reconciled 0 through 43 and selected median seed 1015.",
       "observations": {
         "stable": {
-          "uc03_sha256": "83c28ea121456b99802f8460d7463dc358fb8fa17230c4485eea470ac6669092",
-          "city_and_home_sha256": "32398d5b6629784a4a2bdeb14e15d61d43346fb82e6682617b25b0aaa04365b0",
-          "depot_and_rebalancing_sha256": "9bde962a3aa4b963a69a6a3b5aa0fd8498d0febe3cf0ea5a3822ed47939da8a2"
+          "uc03_sha256": "14ad695795081abbd6b90da5b025df75905de3d7f158021df439d84fd2d0449f",
+          "atlas_sha256": "dcb4940d85c4c630b1b3171ec45e37c4bcd6e653ce405032095a53fdfa69731a",
+          "browser_summary_sha256": "9f4853748389fab920d25c3629274dd4967a850b99f7e97374da5f9fe1c06bf7"
         },
         "immutable": {
-          "uc03_sha256": "c2f6593a1a395c4139a3845df1cf5e90cb24598c57b7a5960147d21e3624d977",
-          "city_and_home_sha256": "0dd2e6e71d88f7133adab73d18c20e71080942e4f8305db5b8c9b7a50bdcc75a",
-          "depot_and_rebalancing_sha256": "9bde962a3aa4b963a69a6a3b5aa0fd8498d0febe3cf0ea5a3822ed47939da8a2"
+          "uc03_sha256": "914164f9753c688fd42edbca871139d400364212549017facb1c753ec4f6f646",
+          "atlas_sha256": "dcb4940d85c4c630b1b3171ec45e37c4bcd6e653ce405032095a53fdfa69731a",
+          "browser_summary_sha256": "bc828af9fd74d132225987ff5b4e1eb5f464a3585a857f541e6765e1ba64038b"
         }
       }
     }
   },
   "meaning": "Byte consistency and supplied hosting observations; not independent authenticity, provider configuration, operational authority or permission to deploy.",
   "stable_url": "https://fleetlab.pages.dev",
-  "source_tree": "cd38b69fce6a6964489bad9c63faa5f0803884eb",
-  "source_branch": "codex/fleetlab-uc03-20261115",
-  "source_pull_request": "https://github.com/bohueilin/Hermes/pull/36",
-  "production_deployment_id_prefix": "7762e5d6",
-  "prior_production_deployment_id_prefix": "febca83c",
+  "source_tree": "c85171d3769fecead2ce235b62f746661c59a105",
+  "source_branch": "feat/fleetlab-audit-batch-20261116",
+  "source_pull_request": "https://github.com/bohueilin/Hermes/pull/39",
+  "production_deployment_id_prefix": "9616e773",
+  "prior_production_deployment_id_prefix": "7762e5d6",
   "deployment_id_note": "Only immutable URL prefixes were observed for these releases; no full deployment UUID is asserted.",
-  "immutable_url": "https://7762e5d6.fleetlab.pages.dev",
-  "preview_url": "https://bbe3723e.fleetlab.pages.dev",
-  "preview_deployment_id_prefix": "bbe3723e",
+  "immutable_url": "https://9616e773.fleetlab.pages.dev",
+  "preview_url": "https://008803e4.fleetlab.pages.dev",
+  "preview_deployment_id_prefix": "008803e4",
   "site_rollback": {
-    "deployment_id_prefix": "febca83c",
-    "immutable_url": "https://febca83c.fleetlab.pages.dev",
-    "source_commit": "43d415379d611600731ef9d5ae60c93fc4ac3f75",
-    "method": "Owner-operated Cloudflare Pages rollback to the November 11 site.",
+    "deployment_id_prefix": "7762e5d6",
+    "immutable_url": "https://7762e5d6.fleetlab.pages.dev",
+    "source_commit": "3bdb5045e845e75678b4548c3ff8c2a7cf15e2d8",
+    "method": "Owner-operated Cloudflare Pages rollback to the November 15 site.",
     "rehearsal": "NOT_RUN"
   },
   "rollback_note": "rollback is the compatible staged City viewer generation inside this package. Whole-site rollback is site_rollback; neither rollback was rehearsed.",
   "files_scope": "SMOKE_SUBSET: 128 selected observed paths: the November 2 subset with its City release, City rollback and source-offer paths mapped to this release. The complete 10,186-path stable-site observation is bound by verification.full_readback_sha256.",
-  "capacity_release_sidecar_sha256": "8b338ec7edef15ada64cff414ca57cfb4c86f1ad29efbec54ca21e3a0c941d77",
-  "capacity_release_digest": "dde40bdfe78d5db589e91458938040225494acda60d261ad844d092001db6490",
-  "software_delivery_release_sidecar_sha256": "0c590f6dbb6de7707a83cdc41c4d8b8e52520d9e25363f9d9189d9a6253b4b88",
-  "software_delivery_release_digest": "a768069f383b992842f72261c2edf20393383ddd2ea3575429437c72b21a142c",
-  "delivery_order_release_sidecar_sha256": "1a4c7b77ef3b80d022369d0237f1fea9b8fda3ff6fc2c42c3709abcca07488ac",
-  "delivery_order_release_digest": "8083c3aaaf9607eb25b4296eefd8b5c100fa1a8770e3e9fdcb6be1ca2bfdeacf",
-  "rebalancing_release_sidecar_sha256": "e721b601320da95e99da11ec819ee8bb6181442bada2ef46d2eb7b9dcc3f1b44",
-  "rebalancing_release_digest": "191ec081a072222aa285f0590f7956d0e0dc46e328988ac94148bd8811b64ffc",
-  "dispatch_release_sidecar_sha256": "bf056de12310b4a4bf3d1c2f84bf4462d904c8159a7464718bcf8b3450a53443",
-  "dispatch_release_digest": "1b32a46d591484f02de3e5bb8b1042a17f9b59f712e8b9cd1b7bb19fbc5f23a5",
-  "depot_lab_release_sidecar_sha256": "53be65d7cb8ac3bbd5c00d8155cf2cc16773f2b73049dd12a72114fd5f6e67ed",
-  "depot_lab_release_digest": "cd72dcc8961218d686db7a3e657872480e3543bd7aae7a0def9731cf0db4530c",
+  "capacity_release_sidecar_sha256": "a976e18dbf0387afd3ad7ad98db4174107ae8b03b659c3a80f6c3ed1515bd870",
+  "capacity_release_digest": "cbde47d077e28a668ab9d14f91c452a2d35e28864248c788ff1c6904560834d3",
+  "software_delivery_release_sidecar_sha256": "e28bcc5de836f9da1c2af244958349436234fea0fba28b2e533d8efed1bbfb3d",
+  "software_delivery_release_digest": "24649d73d90dc307c0a4489fc831520280082ba1d705420fb17ab7aa507cdc39",
+  "delivery_order_release_sidecar_sha256": "d6a4a3d6ae10dd337b4e3b700623a5b43023c802555c0b4bdee4ed282c7c2e66",
+  "delivery_order_release_digest": "4396252adfdac942acf1a84eabc9ce162272d5424da7e3150ba7a940cbae9025",
+  "rebalancing_release_sidecar_sha256": "1160112c02a81690e41886c119657b6172981d2c5e3e5ca0fc9a2c990e21c993",
+  "rebalancing_release_digest": "22975a7d5ed6094259ac49da4be569519f030d64dff20361bb591ad8a5114141",
+  "dispatch_release_sidecar_sha256": "f9fa96961e16b8e8541a3579275d8aaa2478b39bcb774d076cab206fca1ff3b6",
+  "dispatch_release_digest": "7d411f4df40570cd0c4203588436a79b664ff61ba71461f085b408daaa8c9d5f",
+  "depot_lab_release_sidecar_sha256": "83e7653937bfc637e380a1f9b67d57de58b7a541e163713ed4f1c3c3edc22100",
+  "depot_lab_release_digest": "2da9ab720cc3a4719ade615553267292b5e77538d3ff0e8c4c7fda101088b21b",
   "nf04_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "delivery_order_qualification": "PUBLISHED_CANDIDATE_DEVICE_AND_HUMAN_OPEN",
   "rebalancing_qualification": {
@@ -672,28 +672,28 @@
   "teaching_package": {
     "bytes": 44355,
     "path": "downloads/teaching-package.json",
-    "sha256": "c2ec59159135771f020ff9fa00b7b7b835ab1b989840087befea52c5edda5e4d"
+    "sha256": "7ceff55ee07769c4ad98d7f232fb6f92b8ae098eee2497ba716f26499aa45f06"
   },
   "teaching_source_offer": {
-    "bytes": 1173750,
-    "extracted_sha256": "4d53c15f503e4301f7029694d65165fc62796e71670e689789950b306fc82003",
-    "original_inventory_sha256": "c0afe6c9334c0e4e708b893eba302e039c260e6da01908dba9d68aa330eb32d7",
+    "bytes": 1174902,
+    "extracted_sha256": "57f79a24900c06c6efe5b7e599d99e20eddd6ebc599f2e6a01a2b1e80f5f7bcd",
+    "original_inventory_sha256": "9170e6fc653019c477d9af16c2837b3aa5d863b8facd03f5d9e9956e3d0cf1d7",
     "owner": "teaching-original-source-and-tools",
-    "path": "network-flows/sources/0d7658ba6d508baa681aa99b812d981e5e2aecb00a7dcf2c352ae8ff2dae5aa0.json.gz",
-    "sha256": "0d7658ba6d508baa681aa99b812d981e5e2aecb00a7dcf2c352ae8ff2dae5aa0"
+    "path": "network-flows/sources/48a315336d4d2fd8793173c9dc899638952cafcde192527a2892405073a23c70.json.gz",
+    "sha256": "48a315336d4d2fd8793173c9dc899638952cafcde192527a2892405073a23c70"
   },
-  "non_city_bytes": 16459443,
+  "non_city_bytes": 16464086,
   "integrated_text": {
-    "delivery_order_closure_bytes": 281795,
-    "depot_closure_bytes": 568477,
-    "depot_route_local_bytes": 418159,
-    "emitted_text_bytes": 3651096,
+    "delivery_order_closure_bytes": 282378,
+    "depot_closure_bytes": 569086,
+    "depot_route_local_bytes": 418185,
+    "emitted_text_bytes": 3654018,
     "hosted_artwork_bytes": 7933679,
-    "integration_text_bytes": 183944,
-    "nf03_closure_bytes": 595530,
-    "nf04_closure_bytes": 276671,
-    "r1_closure_bytes": 253146,
-    "r3_closure_bytes": 208607
+    "integration_text_bytes": 184527,
+    "nf03_closure_bytes": 597327,
+    "nf04_closure_bytes": 277254,
+    "r1_closure_bytes": 254309,
+    "r3_closure_bytes": 209190
   },
   "hosted_presentation": {
     "schema": "fleetlab.hosted-presentation/1.0.0",
